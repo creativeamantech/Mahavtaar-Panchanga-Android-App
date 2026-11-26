@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">महावतार पंचांग</string>
+    <string name="widget_name">अभी क्या चल रहा है (लाइव)</string>
+    <string name="widget_description">होम स्क्रीन पर आज की तिथि, नक्षत्र, सक्रिय मुहूर्त, चौघड़िया, होरा, पंच-तत्व व स्वर नाड़ी लाइव देखें।</string>
+    <string name="widget_hora_tattva_name">होरा, पंच-तत्व व स्वर नाड़ी लाइव</string>
+    <string name="widget_hora_tattva_description">वर्तमान ग्रह होरा, ५ उप-तत्त्व, प्रवहमान स्वर नाड़ी और स्वर संधि काल लाइव देखें।</string>
+    <string name="widget_muhurta_name">शुभ मुहूर्त व चौघड़िया लाइव</string>
+    <string name="widget_muhurta_description">सक्रिय शुभ-अशुभ मुहूर्त (अभिजित्, राहु काल, ब्रह्म, अमृत), चौघड़िया व सूर्योदय/सूर्यास्त लाइव देखें।</string>
+    <string name="nav_home">होम</string>
+    <string name="nav_panchanga">पंचांग</string>
+    <string name="nav_calendar">कैलेंडर</string>
+    <string name="nav_hora">होरा</string>
+    <string name="nav_more">अधिक</string>
+    <string name="notification_channel_name">पंचांग सूचनाएँ</string>
+    <string name="notification_channel_description">सूर्योदय, सूर्यास्त, तिथि परिवर्तन एवं व्रत-त्यौहार के रिमाइंडर।</string>
+</resources>

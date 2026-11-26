@@ -1,0 +1,801 @@
+import React, { useState, useEffect } from "react";
+import {
+  Settings,
+  X,
+  Check,
+  BookmarkCheck,
+  RotateCcw,
+  ShieldCheck,
+  MapPin,
+  Sparkles,
+  Sun,
+  Moon,
+} from "lucide-react";
+import type { CoordinateSelection, MonthSystem, AppTheme } from "../types";
+import { type Language, translations } from "../i18n";
+import { NAKSHATRA_NAMES } from "../lib/navtaraEngine";
+import { Star } from "lucide-react";
+import {
+  getNotificationPreferences,
+  saveNotificationPreferences,
+  NotificationPreferences,
+  defaultNotificationPreferences,
+  requestNotificationPermission,
+  getNotificationPermissionStatus,
+  sendTestNotification,
+  playNotificationTune,
+  triggerTattvaSensoryFeedback,
+  playTattvaAudioChime,
+  type NotificationPermissionStatus,
+} from "../lib/notificationEngine";
+import { BellOff, BellRing } from "lucide-react";
+
+interface SettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  ayanamsa: CoordinateSelection;
+  monthSystem: MonthSystem;
+  currentCity: string;
+  theme: AppTheme;
+  birthNakshatra: number;
+  onThemeChange?: (theme: AppTheme) => void;
+  customCoords?: {
+    lat: number;
+    lon: number;
+    tz: string;
+    name: string;
+    isDeviceLocation?: boolean;
+    accuracyMeters?: number;
+  } | null;
+  onUpdateSettings: (
+    ayanamsa: CoordinateSelection,
+    monthSystem: MonthSystem,
+    theme?: AppTheme,
+    birthNakshatra?: number,
+  ) => void;
+  onResetDefaults: () => void;
+  lang: Language;
+}
+
+const AYANAMSA_OPTIONS: {
+  key: CoordinateSelection;
+  name: string;
+  desc: string;
+  descHi: string;
+  descSa: string;
+}[] = [
+  {
+    key: "citra",
+    name: "Chitra Paksha (Lahiri)",
+    desc: "Official standard adopted by the Calendar Reform Committee of Government of India.",
+    descHi: "भारत सरकार की राष्ट्रीय पंचांग सुधार समिति द्वारा स्वीकृत मानक अयनांश (लाहिड़ी)।",
+    descSa: "भारतसर्वकारस्य पञ्चाङ्गसुधारसमित्या अङ्गीकृतः चित्रपक्ष-लाहिरी-अयनांशः।",
+  },
+  {
+    key: "krishnamurti",
+    name: "Krishnamurti Paddhati (KP)",
+    desc: "Widely used in KP astrology system; derived by Prof. K.S. Krishnamurti.",
+    descHi: "कृष्णमूर्ति पद्धति (KP) ज्योतिष में प्रयुक्त मानक अयनांश।",
+    descSa: "कृष्णमूर्ति-पद्धत्यां बहुप्रयुक्तः अयनांशः।",
+  },
+  {
+    key: "raman",
+    name: "B.V. Raman",
+    desc: "Formulated by Dr. B.V. Raman, based on traditional Hindu astronomy texts.",
+    descHi: "डॉ. बी.वी. रामन द्वारा प्राचीन ग्रन्थों के अनुसार प्रतिपादित अयनांश।",
+    descSa: "डा. बी.वी. रामण-महोदयेन प्रतिपादितः पारम्परिक-अयनांशः।",
+  },
+  {
+    key: "tropical",
+    name: "Sayana (Tropical / Western)",
+    desc: "Western tropical zodiac (Ayanāṁśa = 0°); 0° Aries aligns with Vernal Equinox.",
+    descHi: "सायान पद्धति (पश्चिमी निरयनांश = ०°), वसन्त विषुव पर आधारित।",
+    descSa: "सायनायन-पद्धतिः (शून्य-अयनांशः), विषुवबिन्दुसंलग्नम्।",
+  },
+  {
+    key: "revati",
+    name: "Revati (Usha-Shashi)",
+    desc: "Zero point anchored at the star Zeta Piscium (Revatī).",
+    descHi: "रेवती तारा (Zeta Piscium) को शून्य बिन्दु मानकर गणना।",
+    descSa: "रेवती-तारकां शून्यबिन्दुं मत्वा निरयण-गणना।",
+  },
+  {
+    key: "pushya",
+    name: "Pushya Paksha",
+    desc: "Ancient Vedic star system referencing Delta Cancri (Puṣya).",
+    descHi: "प्राचीन वैदिक गणना जो पुष्य नक्षत्र (Delta Cancri) को आधार बनाती है।",
+    descSa: "पुष्यनक्षत्र-केन्द्रिता प्राचीनवैदिकी गणना।",
+  },
+];
+
+export const SettingsModal: React.FC<SettingsModalProps> = ({
+  isOpen,
+  onClose,
+  ayanamsa,
+  monthSystem,
+  currentCity,
+  theme,
+  birthNakshatra,
+  onThemeChange,
+  customCoords,
+  onUpdateSettings,
+  onResetDefaults,
+  lang,
+}) => {
+  const [selectedAyanamsa, setSelectedAyanamsa] = useState<CoordinateSelection>(ayanamsa);
+  const [selectedMonthSystem, setSelectedMonthSystem] = useState<MonthSystem>(monthSystem);
+  const [selectedTheme, setSelectedTheme] = useState<AppTheme>(theme);
+  const [selectedBirthNakshatra, setSelectedBirthNakshatra] = useState<number>(birthNakshatra);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>(
+    defaultNotificationPreferences,
+  );
+  const [permStatus, setPermStatus] = useState<NotificationPermissionStatus>("default");
+
+  useEffect(() => {
+    if (isOpen) {
+      setNotifPrefs(getNotificationPreferences());
+      setPermStatus(getNotificationPermissionStatus());
+    }
+  }, [isOpen]);
+
+  const handleToggleNotifications = async () => {
+    const nextVal = !notifPrefs.enabled;
+    if (!nextVal) {
+      setNotifPrefs({ ...notifPrefs, enabled: false });
+      return;
+    }
+    const status = await requestNotificationPermission();
+    setPermStatus(status);
+    setNotifPrefs({ ...notifPrefs, enabled: status === "granted" });
+  };
+  const [saveToLocalStorage, setSaveToLocalStorage] = useState<boolean>(true);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<boolean>(false);
+
+  const t = translations[lang];
+
+  useEffect(() => {
+    setSelectedAyanamsa(ayanamsa);
+    setSelectedMonthSystem(monthSystem);
+    setSelectedTheme(theme);
+    setSaveSuccessMsg(false);
+  }, [ayanamsa, monthSystem, theme, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSelectTheme = (newTheme: AppTheme) => {
+    setSelectedTheme(newTheme);
+    if (onThemeChange) {
+      onThemeChange(newTheme);
+    }
+  };
+
+  const handleSave = () => {
+    onUpdateSettings(selectedAyanamsa, selectedMonthSystem, selectedTheme, selectedBirthNakshatra);
+    saveNotificationPreferences(notifPrefs);
+    window.dispatchEvent(new Event("mahavtaar_notif_prefs_updated"));
+    setSaveSuccessMsg(true);
+    setTimeout(() => {
+      onClose();
+    }, 600);
+  };
+
+  const handleReset = () => {
+    onResetDefaults();
+    setSaveSuccessMsg(true);
+    setTimeout(() => {
+      onClose();
+    }, 600);
+  };
+
+  return (
+    <div
+      id="settings-modal-backdrop"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 p-4 backdrop-blur-xs"
+    >
+      <div
+        id="settings-modal-dialog"
+        className="w-full max-w-lg rounded-[1.5rem] border border-stone-200/60 bg-stone-50/95 backdrop-blur-xl p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto relative"
+      >
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-stone-100 pb-4">
+          <div className="flex items-center space-x-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-800">
+              <Settings className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-stone-900 font-serif-vedic">{t.settings}</h3>
+              <p className="text-xs text-stone-500 font-sans">
+                {lang === "hi"
+                  ? "अयनांश, मास गणना एवं स्थायी डिवाइस सेटिंग्स"
+                  : "Ayanāṁśa, Month Reckoning & Saved Device Preferences"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            id="close-settings-modal-btn"
+            className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {saveSuccessMsg && (
+          <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-900 font-bold flex items-center gap-2 animate-in fade-in duration-300">
+            <Check className="h-4 w-4 text-emerald-600" />
+            <span>{t.settingsSavedToast}</span>
+          </div>
+        )}
+
+        <div className="mt-5 space-y-6">
+          {/* Current Device Status Banner */}
+          <div className="rounded-2xl border border-amber-200/70 bg-white/80 p-4 shadow-2xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-amber-700" />
+                <span className="text-xs font-bold text-amber-950 uppercase tracking-wider">
+                  {t.savedSettingsTitle}
+                </span>
+              </div>
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                Active on Device
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-stone-600 pt-1 border-t border-stone-100">
+              <span className="flex items-center gap-1.5 font-medium text-stone-700">
+                <MapPin className="h-3.5 w-3.5 text-amber-600" />
+                {currentCity}
+              </span>
+              {customCoords?.isDeviceLocation && (
+                <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded font-mono font-bold border border-amber-200">
+                  GPS Active
+                </span>
+              )}
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer pt-1 text-xs text-stone-700 select-none">
+              <input
+                type="checkbox"
+                id="save-to-device-toggle"
+                checked={saveToLocalStorage}
+                onChange={(e) => setSaveToLocalStorage(e.target.checked)}
+                className="h-4 w-4 rounded text-amber-700 focus:ring-amber-500 border-stone-300"
+              />
+              <span className="font-semibold text-stone-800">{t.saveAsDefault}</span>
+            </label>
+          </div>
+
+          {/* Theme Selection (Parchment vs Night Sky) */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-amber-900 mb-2 font-devanagari">
+              {t.theme}
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Parchment Theme */}
+              <button
+                type="button"
+                id="select-theme-parchment"
+                onClick={() => handleSelectTheme("parchment")}
+                className={`rounded-xl border p-3 text-left transition-all ${
+                  selectedTheme === "parchment"
+                    ? "border-amber-600 bg-amber-50/80 ring-2 ring-amber-600/30"
+                    : "border-stone-200 hover:bg-stone-50 bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sun className="h-4 w-4 text-amber-600" />
+                    <span className="font-bold text-stone-900 text-sm font-devanagari">
+                      {t.parchment}
+                    </span>
+                  </div>
+                  {selectedTheme === "parchment" && <Check className="h-4 w-4 text-amber-700" />}
+                </div>
+                <p className="text-[11px] text-stone-500 mt-1.5 leading-relaxed">
+                  {t.parchmentDesc}
+                </p>
+              </button>
+
+              {/* Night Sky Theme */}
+              <button
+                type="button"
+                id="select-theme-night-sky"
+                onClick={() => handleSelectTheme("nightSky")}
+                className={`rounded-xl border p-3 text-left transition-all ${
+                  selectedTheme === "nightSky"
+                    ? "border-indigo-500 bg-indigo-950/40 ring-2 ring-indigo-500/40 text-stone-100"
+                    : "border-stone-200 hover:bg-stone-50 bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Moon className="h-4 w-4 text-indigo-400" />
+                    <span className="font-bold text-stone-900 text-sm font-devanagari">
+                      {t.nightSky}
+                    </span>
+                  </div>
+                  {selectedTheme === "nightSky" && <Check className="h-4 w-4 text-indigo-400" />}
+                </div>
+                <p className="text-[11px] text-stone-500 mt-1.5 leading-relaxed">
+                  {t.nightSkyDesc}
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* Birth Nakshatra Section */}
+          <div className="rounded-2xl border border-stone-200/60 bg-white/60 p-4 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-amber-900 font-devanagari">
+                  {lang === "hi"
+                    ? "जन्म नक्षत्र (Janma Nakshatra)"
+                    : "Birth Nakshatra (Janma Nakshatra)"}
+                </span>
+                <p className="text-[10px] text-stone-500 mt-0.5 font-sans">
+                  {lang === "hi"
+                    ? "नवतारा और तारा दशा की गणना के लिए"
+                    : "For Navtara and Tara Dasa calculations"}
+                </p>
+              </div>
+              <Star className="h-4 w-4 text-amber-600/50" />
+            </div>
+
+            <select
+              value={selectedBirthNakshatra}
+              onChange={(e) => setSelectedBirthNakshatra(Number(e.target.value))}
+              className="w-full rounded-xl border border-stone-200 bg-stone-50/50 p-2.5 text-sm font-medium text-stone-700 outline-none hover:bg-stone-50 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+            >
+              <option value={0} disabled>
+                {lang === "hi" ? "-- जन्म नक्षत्र चुनें --" : "-- Select Birth Nakshatra --"}
+              </option>
+              {NAKSHATRA_NAMES.map((name, index) => (
+                <option key={index + 1} value={index + 1}>
+                  {index + 1}. {name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Lunar Month System (Amānta vs Pūrṇimānta) */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-amber-900 mb-2 font-devanagari">
+              {t.monthScheme}
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                id="select-amanta"
+                onClick={() => setSelectedMonthSystem("amanta")}
+                className={`rounded-xl border p-3 text-left transition-all ${
+                  selectedMonthSystem === "amanta"
+                    ? "border-amber-600 bg-amber-50/80 ring-2 ring-amber-600/30"
+                    : "border-stone-200 hover:bg-stone-50 bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-stone-900 text-sm font-devanagari">
+                    {t.amanta}
+                  </span>
+                  {selectedMonthSystem === "amanta" && <Check className="h-4 w-4 text-amber-700" />}
+                </div>
+                <p className="text-[11px] text-stone-500 mt-1 leading-relaxed">
+                  {lang === "hi"
+                    ? "अमावस्या के अंत पर नवीन मास प्रारंभ (दक्षिण भारत, महाराष्ट्र, गुजरात में प्रचलित)।"
+                    : "Month ends at New Moon (Amāvasyā). Standard in South India, Maharashtra & Gujarat."}
+                </p>
+              </button>
+
+              <button
+                type="button"
+                id="select-purnimanta"
+                onClick={() => setSelectedMonthSystem("purnimanta")}
+                className={`rounded-xl border p-3 text-left transition-all ${
+                  selectedMonthSystem === "purnimanta"
+                    ? "border-amber-600 bg-amber-50/80 ring-2 ring-amber-600/30"
+                    : "border-stone-200 hover:bg-stone-50 bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-stone-900 text-sm font-devanagari">
+                    {t.purnimanta}
+                  </span>
+                  {selectedMonthSystem === "purnimanta" && (
+                    <Check className="h-4 w-4 text-amber-700" />
+                  )}
+                </div>
+                <p className="text-[11px] text-stone-500 mt-1 leading-relaxed">
+                  {lang === "hi"
+                    ? "पूर्णिमा के अंत पर नवीन मास प्रारंभ (उत्तर भारत में सर्वाधिक प्रचलित)।"
+                    : "Month ends at Full Moon (Pūrṇimā). Standard in North India."}
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* Ayanāṁśa Selection */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-amber-900 mb-2 font-devanagari">
+              {t.ayanamsaSystem}
+            </label>
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {AYANAMSA_OPTIONS.map((opt) => (
+                <div
+                  key={opt.key}
+                  id={`ayanamsa-opt-${opt.key}`}
+                  onClick={() => setSelectedAyanamsa(opt.key)}
+                  className={`flex items-start justify-between rounded-xl border p-3 cursor-pointer transition-all ${
+                    selectedAyanamsa === opt.key
+                      ? "border-amber-600 bg-amber-50/80 ring-1 ring-amber-600/30"
+                      : "border-stone-200 hover:bg-stone-50 bg-white"
+                  }`}
+                >
+                  <div className="pr-3">
+                    <div className="font-bold text-stone-900 text-sm">{opt.name}</div>
+                    <div className="text-xs text-stone-500 mt-0.5 font-sans">
+                      {lang === "hi" ? opt.descHi : opt.desc}
+                    </div>
+                  </div>
+                  {selectedAyanamsa === opt.key && (
+                    <Check className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Notification Settings */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-amber-900 mb-2 font-devanagari">
+            <div className="flex items-center gap-1.5">
+              <BellRing className="w-3.5 h-3.5 text-amber-700" />
+              Push Notifications
+            </div>
+          </label>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 rounded-xl border border-stone-200 bg-white">
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-stone-900 font-devanagari">
+                  Enable Push Alerts
+                </span>
+                <span className="text-[11px] text-stone-500">
+                  Requires browser permission. Keep app open in background.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleToggleNotifications();
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${notifPrefs.enabled ? "bg-amber-600" : "bg-stone-300"}`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notifPrefs.enabled ? "translate-x-4" : "translate-x-0"}`}
+                />
+              </button>
+            </div>
+
+            {permStatus === "open-in-new-tab" && (
+              <p className="text-[11px] rounded-lg bg-amber-50 border border-amber-200 text-amber-900 p-2.5">
+                Your browser won't show the permission prompt inside this embedded preview. Open the
+                app in its own browser tab, then turn alerts on again.
+              </p>
+            )}
+            {permStatus === "denied" && (
+              <p className="text-[11px] rounded-lg bg-red-50 border border-red-200 text-red-800 p-2.5">
+                Notifications are blocked for this site. Allow them in your browser's site settings,
+                then turn alerts on again.
+              </p>
+            )}
+            {permStatus === "unsupported" && (
+              <p className="text-[11px] rounded-lg bg-stone-100 border border-stone-200 text-stone-600 p-2.5">
+                This browser does not support notifications.
+              </p>
+            )}
+
+            {notifPrefs.enabled && permStatus === "granted" && (
+              <button
+                type="button"
+                onClick={() => void sendTestNotification(notifPrefs.customTune)}
+                className="w-full px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 text-xs font-bold text-amber-900 hover:bg-amber-100 transition-colors"
+              >
+                Send a test alert
+              </button>
+            )}
+
+            {notifPrefs.enabled && (
+              <div className="space-y-4 pl-2 sm:pl-4 border-l-2 border-amber-100">
+                {/* Exact Timing / Advance Notification Option */}
+                <div>
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-amber-900 mb-2 font-devanagari">
+                    {lang === "hi"
+                      ? "अधिसूचना समय (Exact Timing / Notification Alert Time)"
+                      : "Notification Alert Timing"}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: 0, labelHi: "सटीक समय पर (0 मि)", labelEn: "Exact Time (0 min)" },
+                      { value: 5, labelHi: "5 मिनट पहले", labelEn: "5 min before" },
+                      { value: 10, labelHi: "10 मिनट पहले", labelEn: "10 min before" },
+                      { value: 15, labelHi: "15 मिनट पहले", labelEn: "15 min before" },
+                      { value: 30, labelHi: "30 मिनट पहले", labelEn: "30 min before" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setNotifPrefs({ ...notifPrefs, advanceMinutes: opt.value })}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          (notifPrefs.advanceMinutes ?? 0) === opt.value
+                            ? "bg-amber-600 text-white shadow-sm"
+                            : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                        }`}
+                      >
+                        {lang === "hi" ? opt.labelHi : opt.labelEn}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Tune Selection */}
+                <div>
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-amber-900 mb-2 font-devanagari">
+                    {lang === "hi" ? "कस्टम ट्यून (Custom Tune)" : "Custom Notification Tune"}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: "default", label: "Default" },
+                      { id: "bell", label: "Temple Bell" },
+                      { id: "shankha", label: "Shankha" },
+                      { id: "om", label: "Om Chant" },
+                    ].map((tune) => (
+                      <button
+                        key={tune.id}
+                        type="button"
+                        onClick={() => {
+                          setNotifPrefs({ ...notifPrefs, customTune: tune.id as any });
+                          // Preview the selected tone
+                          playNotificationTune(tune.id);
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          (notifPrefs.customTune || "default") === tune.id
+                            ? "bg-amber-600 text-white shadow-sm"
+                            : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                        }`}
+                      >
+                        {tune.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Categories */}
+                <div>
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-amber-900 mb-2 font-devanagari">
+                    {lang === "hi" ? "अलर्ट की श्रेणियां (Alert Categories)" : "Alert Categories"}
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs.sunriseSunset ?? notifPrefs.astronomical}
+                        onChange={(e) =>
+                          setNotifPrefs({
+                            ...notifPrefs,
+                            sunriseSunset: e.target.checked,
+                            astronomical: e.target.checked,
+                          })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-600"
+                      />
+                      <span className="text-xs font-medium text-stone-700">Sunrise & Sunset</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs.swaraChanges}
+                        onChange={(e) =>
+                          setNotifPrefs({ ...notifPrefs, swaraChanges: e.target.checked })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-600"
+                      />
+                      <span className="text-xs font-medium text-stone-700">
+                        Swara (Ida/Pingala)
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs.horas}
+                        onChange={(e) =>
+                          setNotifPrefs({
+                            ...notifPrefs,
+                            horas: e.target.checked,
+                            horaStarts: e.target.checked,
+                          })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-600"
+                      />
+                      <span className="text-xs font-medium text-stone-700">Planetary Horas</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs.horaTattvaStarts || notifPrefs.swaraTattvaChanges}
+                        onChange={(e) =>
+                          setNotifPrefs({
+                            ...notifPrefs,
+                            horaTattvaStarts: e.target.checked,
+                            swaraTattvaChanges: e.target.checked,
+                          })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-600"
+                      />
+                      <span className="text-xs font-medium text-stone-700">
+                        {lang === "hi"
+                          ? "तत्त्व अलार्म एवं संधिकाल (नाड़ी व ग्रह सहित)"
+                          : "Tattva Alerts & Transitions (with Nadi & Planet)"}
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs.muhurtas}
+                        onChange={(e) =>
+                          setNotifPrefs({ ...notifPrefs, muhurtas: e.target.checked })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-600"
+                      />
+                      <span className="text-xs font-medium text-stone-700">Important Muhurtas</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs.tithiSwara}
+                        onChange={(e) =>
+                          setNotifPrefs({ ...notifPrefs, tithiSwara: e.target.checked })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-600"
+                      />
+                      <span className="text-xs font-medium text-stone-700">
+                        Tithi/Nakshatra Swara
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Tattva Sensory Feedback Settings (Audio Chime & Haptic Vibration) */}
+                <div className="mt-4 pt-3 border-t border-amber-100/80 bg-amber-50/50 p-3 rounded-xl">
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-amber-900 mb-2 font-devanagari flex items-center gap-1.5">
+                    ✨{" "}
+                    {lang === "hi"
+                      ? "तत्त्व संवेदी संकेत अनुभव (Sensory Experience)"
+                      : "Tattva Sensory Experience & Feedback"}
+                  </span>
+                  <div className="space-y-2.5">
+                    <label className="flex items-center justify-between cursor-pointer text-xs">
+                      <span className="font-medium text-stone-700 flex items-center gap-1.5">
+                        🔊{" "}
+                        {lang === "hi"
+                          ? "तत्त्व परिवर्तन ध्वनि (Audio Chime)"
+                          : "Audio Chime on Tattva Change"}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs.tattvaAudioFeedback ?? true}
+                        onChange={(e) =>
+                          setNotifPrefs({ ...notifPrefs, tattvaAudioFeedback: e.target.checked })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-600"
+                      />
+                    </label>
+
+                    <label className="flex items-center justify-between cursor-pointer text-xs">
+                      <span className="font-medium text-stone-700 flex items-center gap-1.5">
+                        📳{" "}
+                        {lang === "hi"
+                          ? "तत्त्व सूक्ष्म कंपन (Haptic Vibration)"
+                          : "Subtle Haptic Vibration"}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs.tattvaHapticFeedback ?? true}
+                        onChange={(e) =>
+                          setNotifPrefs({ ...notifPrefs, tattvaHapticFeedback: e.target.checked })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-600"
+                      />
+                    </label>
+
+                    <div className="pt-1 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerTattvaSensoryFeedback("Akash", notifPrefs);
+                        }}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium shadow-sm transition-all flex items-center gap-1.5 active:scale-95"
+                      >
+                        🔔{" "}
+                        {lang === "hi"
+                          ? "परीक्षण करें (Test Sound & Vibration)"
+                          : "Test Sound & Vibration"}
+                      </button>
+                      <span className="text-[10px] text-stone-500 italic">
+                        {lang === "hi"
+                          ? "तत्त्व बदलते ही ध्वनि एवं कंपन द्वारा सूचना"
+                          : "Plays chime & subtle vibration on element shift"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {notifPrefs.enabled && (notifPrefs.horas || notifPrefs.horaStarts) && (
+              <div className="pl-2 sm:pl-4 border-l-2 border-amber-100">
+                <div className="pt-2">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-amber-900 mb-2 font-devanagari">
+                    Planetary Horas
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.keys(defaultNotificationPreferences.horaPlanets).map((planet) => (
+                      <button
+                        key={planet}
+                        type="button"
+                        onClick={() => {
+                          const newPlanets = { ...(notifPrefs.horaPlanets || {}) };
+                          newPlanets[planet] = !newPlanets[planet];
+                          setNotifPrefs({ ...notifPrefs, horaPlanets: newPlanets });
+                        }}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          (notifPrefs.horaPlanets?.[planet] ?? true)
+                            ? "bg-amber-100 text-amber-800 border border-amber-200"
+                            : "bg-stone-100 text-stone-500 border border-stone-200"
+                        }`}
+                      >
+                        {planet}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Actions */}
+        <div className="mt-6 flex items-center justify-between border-t border-stone-200/80 pt-4">
+          <button
+            type="button"
+            id="reset-settings-btn"
+            onClick={handleReset}
+            className="flex items-center gap-1.5 text-xs text-stone-500 hover:text-rose-700 transition-colors py-1.5 px-2 rounded-lg hover:bg-rose-50"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>{t.resetDefaults}</span>
+          </button>
+
+          <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              id="cancel-settings-btn"
+              onClick={onClose}
+              className="rounded-xl border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-50"
+            >
+              {t.cancel}
+            </button>
+            <button
+              type="button"
+              id="apply-settings-btn"
+              onClick={handleSave}
+              className="rounded-xl bg-amber-700 px-5 py-2 text-xs font-bold text-white hover:bg-amber-800 shadow-xs flex items-center gap-1.5"
+            >
+              <BookmarkCheck className="h-3.5 w-3.5" />
+              <span>{t.saveSettings}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

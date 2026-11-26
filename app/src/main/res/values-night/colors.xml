@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Adaptive Smoked Obsidian Glass (Night Mode) tokens for native widget views & previews -->
+    <color name="widget_glass_shell_bg">#A60E1428</color>
+    <color name="widget_glass_shell_stroke">#52F5C95C</color>
+    <color name="widget_glass_tile_bg">#7A1D2948</color>
+    <color name="widget_glass_tile_stroke">#33FFFFFF</color>
+    <color name="widget_glass_pill_bg">#59253459</color>
+    <color name="widget_text_primary">#F8F4EC</color>
+    <color name="widget_text_secondary">#C2CCE3</color>
+    <color name="widget_clock_text">#F8E7B9</color>
+    <color name="widget_countdown_gold">#F5C95C</color>
+    <color name="widget_countdown_emerald">#4ADE80</color>
+    <color name="widget_countdown_rose">#FB7185</color>
+    <color name="widget_countdown_cyan">#38BDF8</color>
+</resources>

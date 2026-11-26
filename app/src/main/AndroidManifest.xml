@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".MahavtaarApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MahavtaarPanchanga">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MahavtaarPanchanga">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Custom Vedic Transition Alarm Receiver -->
+        <receiver
+            android:name=".notifications.VedicAlertAlarmReceiver"
+            android:exported="false" />
+
+        <!-- Persistent Running Now Live Notification Receiver -->
+        <receiver
+            android:name=".notifications.LiveRunningNotificationReceiver"
+            android:exported="false" />
+
+        <!-- Short-lived MediaPlayback Foreground Service for uninterrupted alarm tune + TTS voice -->
+        <service
+            android:name=".notifications.VedicAnnouncementService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Zero-Touch Automatic Live Widget Refresh Receiver -->
+        <receiver
+            android:name=".widget.WidgetAutoRefreshReceiver"
+            android:exported="false" />
+
+        <!-- Boot / Clock / Exact Alarm Permission Change Receiver -->
+        <receiver
+            android:name=".notifications.VedicBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Jetpack Glance Home Screen Widget 1: अभी क्या चल रहा है (Running Now Live) -->
+        <receiver
+            android:name=".widget.PanchangaGlanceWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/panchanga_widget_info" />
+        </receiver>
+
+        <!-- Jetpack Glance Home Screen Widget 2: होरा, पंच-तत्व व स्वर नाड़ी लाइव -->
+        <receiver
+            android:name=".widget.HoraTattvaGlanceWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_hora_tattva_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hora_tattva_widget_info" />
+        </receiver>
+
+        <!-- Jetpack Glance Home Screen Widget 3: शुभ मुहूर्त व चौघड़िया लाइव -->
+        <receiver
+            android:name=".widget.MuhurtaGlanceWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_muhurta_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/muhurta_widget_info" />
+        </receiver>
+
+        <!-- Jetpack Glance Home Screen Widget 4: रनिंग नाउ लाइव पट्टी (Running Now Strip) -->
+        <receiver
+            android:name=".widget.RunningNowStripGlanceWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_strip_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/running_now_strip_widget_info" />
+        </receiver>
+
+        <!-- Disable default WorkManager initializer so HiltWorkerFactory is used -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+    </application>
+
+</manifest>

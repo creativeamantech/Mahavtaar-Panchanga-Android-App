@@ -1,0 +1,172 @@
+import React from "react";
+import { type ActiveView } from "./Header";
+import { type Language, translations } from "../i18n";
+import type { AppTheme } from "../types";
+import { Lock } from "lucide-react";
+import { type AppUser, hasUserPermission, VIEW_PERMISSIONS_MAP } from "../services/userAuthService";
+
+interface SpiritualTabsProps {
+  activeView: ActiveView;
+  onViewChange: (view: ActiveView) => void;
+  lang: Language;
+  theme?: AppTheme;
+  orderedViews?: ActiveView[];
+  currentUser?: AppUser | null;
+}
+
+export const SpiritualTabs: React.FC<SpiritualTabsProps> = ({
+  activeView,
+  onViewChange,
+  lang,
+  theme = "parchment",
+  orderedViews,
+  currentUser,
+}) => {
+  const t = translations[lang];
+  const isNight = theme === "nightSky";
+
+  const rawTabs: {
+    id: ActiveView;
+    label: string;
+    icon: string;
+    subLabel?: string;
+  }[] = [
+    {
+      id: "home",
+      label: lang === "hi" ? "मुख्य पृष्ठ" : "Home Hub",
+      icon: "🏠",
+      subLabel: "होम",
+    },
+    {
+      id: "panchanga",
+      label: t.views.panchanga || (lang === "hi" ? "दैनिक पंचांग" : "Panchanga"),
+      icon: "☀️",
+      subLabel: "पञ्चाङ्ग",
+    },
+    {
+      id: "today",
+      label: lang === "hi" ? "दैनिक समय-सारणी" : "Schedule",
+      icon: "📋",
+      subLabel: "समय-सारणी",
+    },
+    {
+      id: "timings",
+      label: t.views.timings || (lang === "hi" ? "मुहूर्त" : "Timings"),
+      icon: "⏰",
+      subLabel: "मुहूर्ताः",
+    },
+    {
+      id: "planets",
+      label: t.views.planets || (lang === "hi" ? "ग्रह स्थिति" : "Planets"),
+      icon: "🪐",
+      subLabel: "ग्रहस्थिति",
+    },
+    {
+      id: "kundli",
+      label: lang === "hi" ? "जन्म कुण्डली" : "Janm Kundli",
+      icon: "☸️",
+      subLabel: "कुण्डली",
+    },
+    {
+      id: "navagraha",
+      label: lang === "hi" ? "नवग्रह मन्त्र" : "Navagraha",
+      icon: "🕉️",
+      subLabel: "नवग्रह",
+    },
+    {
+      id: "swara",
+      label: t.views.swara || (lang === "hi" ? "स्वर विज्ञान" : "Swara Yoga"),
+      icon: "🌬️",
+      subLabel: "स्वरोदय",
+    },
+    {
+      id: "navtara",
+      label: lang === "hi" ? "नव तारा" : "Navtara",
+      icon: "⭐",
+      subLabel: "नव तारा",
+    },
+    {
+      id: "horas",
+      label: lang === "hi" ? "वैदिक होरा" : "Horas",
+      icon: "🕐",
+      subLabel: "होरा",
+    },
+    {
+      id: "tattva",
+      label: lang === "hi" ? "तत्व" : "Tattva",
+      icon: "✨",
+      subLabel: "तत्व",
+    },
+    {
+      id: "festivals",
+      label: lang === "hi" ? "पर्व व व्रत" : "Festivals",
+      icon: "🪔",
+      subLabel: "उत्सव",
+    },
+  ];
+
+  // If user has custom ordered views, sort tabs based on orderedViews
+  const tabs = React.useMemo(() => {
+    if (!orderedViews || orderedViews.length === 0) return rawTabs;
+    const tabMap = new Map<ActiveView, (typeof rawTabs)[0]>();
+    rawTabs.forEach((t) => tabMap.set(t.id, t));
+
+    const sorted: typeof rawTabs = [];
+    orderedViews.forEach((viewId) => {
+      const found = tabMap.get(viewId);
+      if (found) sorted.push(found);
+    });
+    // Add any remaining tabs not in orderedViews
+    rawTabs.forEach((t) => {
+      if (!sorted.find((s) => s.id === t.id)) {
+        sorted.push(t);
+      }
+    });
+    return sorted;
+  }, [orderedViews, lang, t]);
+
+  return (
+    <nav
+      id="category-navigation"
+      className={`shrink-0 z-30 border-b transition-colors shadow-2xs ${
+        isNight
+          ? "bg-[#0E1322]/95 border-indigo-950/70 text-slate-300 backdrop-blur-md"
+          : "bg-white/95 border-[#E4E2DD] text-stone-700 backdrop-blur-md"
+      }`}
+    >
+      <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
+        <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto cat-nav-scroll py-1">
+          {tabs.map((tab) => {
+            const isActive = activeView === tab.id;
+            const requiredPerm = VIEW_PERMISSIONS_MAP[tab.id];
+            const isLocked = Boolean(
+              requiredPerm && currentUser && !hasUserPermission(currentUser, requiredPerm),
+            );
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                id={`cat-tab-${tab.id}`}
+                onClick={() => onViewChange(tab.id)}
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-[13px] font-semibold tracking-wide whitespace-nowrap shrink-0 transition-all border-b-[2.5px] -mb-1 ${
+                  isActive
+                    ? isNight
+                      ? "text-[#F0C96A] border-[#F0C96A] font-bold"
+                      : "text-[#D4680A] border-[#D4680A] font-bold"
+                    : isNight
+                      ? "text-slate-400 hover:text-slate-100 border-transparent hover:border-slate-700"
+                      : "text-[#7C7F8E] hover:text-[#1C1B1A] border-transparent hover:border-stone-300"
+                }`}
+              >
+                <span className="text-sm sm:text-base shrink-0 leading-none">{tab.icon}</span>
+                <span>{tab.label}</span>
+                {isLocked && <Lock className="w-3 h-3 text-rose-400/80 shrink-0 ml-0.5" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </nav>
+  );
+};

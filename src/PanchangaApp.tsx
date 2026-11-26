@@ -1,0 +1,1714 @@
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Header } from "./components/Header";
+import { SpiritualTabs } from "./components/SpiritualTabs";
+import { VedicInvocationBanner } from "./components/VedicInvocationBanner";
+import { CurrentMuhurtaWidget } from "./components/CurrentMuhurtaWidget";
+import { FestivalCard } from "./components/FestivalCard";
+import { MoonPhaseVisualizer } from "./components/MoonPhaseVisualizer";
+import { MuhurtaTimelineBar } from "./components/MuhurtaTimelineBar";
+import { PanchangaSummaryCard } from "./components/PanchangaSummaryCard";
+import { FiveAngasCard } from "./components/FiveAngasCard";
+import { AuspiciousTimingsCard } from "./components/AuspiciousTimingsCard";
+import { GauriChoghadiyaCard } from "./components/GauriChoghadiyaCard";
+import { SwaraYogaCard } from "./components/SwaraYogaCard";
+import { RunningNowWidget } from "./components/RunningNowWidget";
+import { NextMajorIngressWidget } from "./components/NextMajorIngressWidget";
+import { PlanetaryPositionsCard } from "./components/PlanetaryPositionsCard";
+import { PlanetTransitionsCard } from "./components/PlanetTransitionsCard";
+import { GoogleCalendarSyncModal } from "./components/GoogleCalendarSyncModal";
+import { GoogleSheetsModal } from "./components/GoogleSheetsModal";
+import { LocationModal } from "./components/LocationModal";
+import { SettingsModal } from "./components/SettingsModal";
+import { PrintablePanchanga } from "./components/PrintablePanchanga";
+import { VedicHorasView } from "./components/VedicHorasView";
+import { TattvaView } from "./components/TattvaView";
+import { NavtaraView } from "./components/NavtaraView";
+import { TodayScheduleView } from "./components/TodayScheduleView";
+import { FestivalsView } from "./components/FestivalsView";
+import { InvocationBanner } from "./components/InvocationBanner";
+import { NavagrahaView } from "./components/NavagrahaView";
+import { KundliView } from "./components/KundliView";
+import { MobileBottomNav } from "./components/MobileBottomNav";
+import { MobileMenuDrawer } from "./components/MobileMenuDrawer";
+import {
+  type AppUser,
+  getAuthenticatedUser,
+  logoutUser,
+  hasUserPermission,
+  VIEW_PERMISSIONS_MAP,
+} from "./services/userAuthService";
+import { LoginPortalView } from "./components/LoginPortalView";
+import { AccessDeniedCard } from "./components/AccessDeniedCard";
+import { AdminUsersManagementModal } from "./components/AdminUsersManagementModal";
+import { getAccessToken } from "./services/googleCalendarAuth";
+import {
+  syncMultiDayPanchangaEvents,
+  getAutoContinuousSyncPref,
+} from "./services/googleCalendarService";
+import type {
+  PanchangaResponse,
+  CityLocation,
+  MonthSystem,
+  CoordinateSelection,
+  AppTheme,
+} from "./types";
+import {
+  AlertCircle,
+  RefreshCw,
+  Sun,
+  Moon,
+  Clock,
+  Wind,
+  Calendar,
+  LayoutGrid,
+  MapPin,
+  Flame,
+  ArrowRight,
+  Activity,
+  ChevronLeft,
+  ChevronRight,
+  Settings,
+  Sparkles,
+  Compass,
+  Star,
+  ListTodo,
+  CalendarDays,
+  Hourglass,
+  Check,
+  Home,
+  FileSpreadsheet,
+  ShieldCheck,
+  User as UserIcon,
+  LogOut,
+} from "lucide-react";
+import { type Language, translations } from "./i18n";
+import {
+  schedulePanchangaNotifications,
+  getNotificationPreferences,
+  triggerTattvaSensoryFeedback,
+} from "./lib/notificationEngine";
+import { resolveCurrentHora } from "./horaEngine";
+import type { ActiveView } from "./components/Header";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  loadUserSettings,
+  saveUserSettings,
+  clearUserSettings,
+  DEFAULT_USER_SETTINGS,
+} from "./settingsStorage";
+import { HomeHubView } from "./components/HomeHubView";
+import {
+  getStoredNavPreferences,
+  saveNavPreferences,
+  type NavPreferences,
+} from "./lib/navPreferences";
+import {
+  getPanchangaCacheKey,
+  loadCachedPanchanga,
+  saveCachedPanchanga,
+  loadLastSuccessfulPanchanga,
+} from "./lib/panchangaCache";
+
+// Sidebar Navigation Item Component
+const NavItem = ({
+  icon: Icon,
+  label,
+  subLabel,
+  badge,
+  isActive,
+  onClick,
+  theme,
+  isCollapsed = false,
+}: {
+  icon: React.ElementType;
+  label: string;
+  subLabel?: string;
+  badge?: string;
+  isActive: boolean;
+  onClick: () => void;
+  theme: AppTheme;
+  isCollapsed?: boolean;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title={isCollapsed ? label : undefined}
+    className={`w-full flex items-center ${isCollapsed ? "justify-center p-2" : "justify-between px-3 py-2.5"} rounded-xl text-left transition-all group relative overflow-hidden ${
+      isActive
+        ? theme === "nightSky"
+          ? "text-amber-300 font-bold bg-indigo-950/80 border border-indigo-500/40 shadow-xs"
+          : "text-amber-950 font-bold bg-amber-100/70 border border-amber-300/70 shadow-xs"
+        : theme === "nightSky"
+          ? "text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent"
+          : "text-stone-700 hover:text-stone-950 hover:bg-stone-100/90 border border-transparent"
+    }`}
+  >
+    {isActive && (
+      <motion.div
+        layoutId="sidebarActiveTab"
+        className={`absolute inset-0 rounded-xl -z-10 shadow-xs border ${
+          theme === "nightSky"
+            ? "bg-indigo-900/40 border-indigo-500/40"
+            : "bg-white/70 border-amber-300/80"
+        }`}
+        initial={false}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      />
+    )}
+    <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+      <div
+        className={`flex h-8 w-8 items-center justify-center rounded-lg shrink-0 transition-all ${
+          isActive
+            ? theme === "nightSky"
+              ? "bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/40"
+              : "bg-amber-600/15 text-amber-800 ring-1 ring-amber-600/30"
+            : theme === "nightSky"
+              ? "bg-slate-800/80 text-slate-400 group-hover:text-slate-200 group-hover:bg-slate-700/80"
+              : "bg-stone-200/60 text-stone-500 group-hover:text-stone-800 group-hover:bg-stone-200"
+        }`}
+      >
+        <Icon className="w-4 h-4 shrink-0" />
+      </div>
+      {!isCollapsed && (
+        <div className="flex flex-col min-w-0 flex-1">
+          <span className="text-xs sm:text-[13px] font-semibold tracking-tight truncate leading-tight">
+            {label}
+          </span>
+          {subLabel && (
+            <span
+              className={`text-[10px] tracking-normal truncate leading-tight mt-0.5 ${
+                isActive
+                  ? theme === "nightSky"
+                    ? "text-amber-300/80"
+                    : "text-amber-800/90 font-medium"
+                  : theme === "nightSky"
+                    ? "text-slate-400/80 group-hover:text-slate-300"
+                    : "text-stone-500/80 group-hover:text-stone-700"
+              }`}
+            >
+              {subLabel}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+    {badge && !isCollapsed && (
+      <span
+        className={`ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 ${
+          isActive
+            ? theme === "nightSky"
+              ? "bg-amber-400/25 text-amber-200 border border-amber-400/40"
+              : "bg-amber-200/80 text-amber-900 border border-amber-300"
+            : theme === "nightSky"
+              ? "bg-slate-800 text-slate-400 border border-slate-700"
+              : "bg-stone-100 text-stone-500 border border-stone-200"
+        }`}
+      >
+        {badge}
+      </span>
+    )}
+  </button>
+);
+
+export default function App() {
+  // Current date formatted as DD/MM/YYYY
+  const getTodayFormatted = () => {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, "0");
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const y = now.getFullYear();
+    return `${d}/${m}/${y}`;
+  };
+
+  // Load saved device settings from localStorage
+  const savedSettings = loadUserSettings();
+
+  const [lang, setLang] = useState<Language>(savedSettings.lang);
+  const [currentDate, setCurrentDate] = useState<string>(getTodayFormatted());
+  const [currentCity, setCurrentCity] = useState<string>(savedSettings.currentCity);
+  const [customCoords, setCustomCoords] = useState<{
+    lat: number;
+    lon: number;
+    tz: string;
+    name: string;
+    isDeviceLocation?: boolean;
+    accuracyMeters?: number;
+  } | null>(savedSettings.customCoords);
+
+  const [monthSystem, setMonthSystem] = useState<MonthSystem>(savedSettings.monthSystem);
+  const [ayanamsa, setAyanamsa] = useState<CoordinateSelection>(savedSettings.ayanamsa);
+  const [theme, setTheme] = useState<AppTheme>(savedSettings.theme || "parchment");
+  const [birthNakshatra, setBirthNakshatra] = useState<number>(savedSettings.birthNakshatra || 1);
+
+  // User Navigation Preferences (Order, Default Landing Page, Layout Format)
+  const initialNavPrefs = getStoredNavPreferences();
+  const [navPreferences, setNavPreferences] = useState<NavPreferences>(initialNavPrefs);
+  const [activeView, setActiveView] = useState<ActiveView>(
+    initialNavPrefs.defaultLandingView || "home",
+  );
+
+  const handleUpdateNavPreferences = (newPrefs: NavPreferences) => {
+    setNavPreferences(newPrefs);
+    saveNavPreferences(newPrefs);
+  };
+
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCalendarSyncOpen, setIsCalendarSyncOpen] = useState(false);
+  const [isGoogleSheetsOpen, setIsGoogleSheetsOpen] = useState(false);
+  const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Authentication & RBAC User State
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => getAuthenticatedUser());
+  const [isAdminUsersOpen, setIsAdminUsersOpen] = useState(false);
+
+  const handleLogout = useCallback(() => {
+    logoutUser();
+    setCurrentUser(null);
+  }, []);
+
+  const [panchangaData, setPanchangaData] = useState<PanchangaResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const t = translations[lang];
+
+  // Desktop Keyboard Shortcuts (←/→ day, T today, / search, Esc close modals)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (e.target as HTMLElement)?.tagName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(activeTag)) return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        const parts = currentDate.split("/");
+        if (parts.length === 3) {
+          const d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+          d.setDate(d.getDate() - 1);
+          const day = String(d.getDate()).padStart(2, "0");
+          const month = String(d.getMonth() + 1).padStart(2, "0");
+          setCurrentDate(`${day}/${month}/${d.getFullYear()}`);
+        }
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        const parts = currentDate.split("/");
+        if (parts.length === 3) {
+          const d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+          d.setDate(d.getDate() + 1);
+          const day = String(d.getDate()).padStart(2, "0");
+          const month = String(d.getMonth() + 1).padStart(2, "0");
+          setCurrentDate(`${day}/${month}/${d.getFullYear()}`);
+        }
+      } else if (e.key === "t" || e.key === "T") {
+        e.preventDefault();
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, "0");
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        setCurrentDate(`${day}/${month}/${now.getFullYear()}`);
+        showToast(lang === "hi" ? "आज के दिन पर लौटे" : "Jumped to Today");
+      } else if (e.key === "/") {
+        e.preventDefault();
+        setIsLocationOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentDate, lang]);
+
+  // Sync theme with HTML root and body class
+
+  // Notification Scheduler
+  useEffect(() => {
+    if (panchangaData) {
+      const prefs = getNotificationPreferences();
+      schedulePanchangaNotifications(panchangaData, prefs);
+
+      // Background Continuous Auto-Sync into "Panchang Calendar" if enabled by user
+      if (getAutoContinuousSyncPref()) {
+        getAccessToken().then((token) => {
+          if (token) {
+            syncMultiDayPanchangaEvents(token, panchangaData, 30).catch((err) =>
+              console.warn("Panchang Calendar auto-sync background notice:", err),
+            );
+          }
+        });
+      }
+    }
+  }, [panchangaData]);
+
+  // Listener for preferences update + re-arm timers when the tab wakes up
+  useEffect(() => {
+    const handlePrefsUpdate = () => {
+      if (panchangaData) {
+        const prefs = getNotificationPreferences();
+        schedulePanchangaNotifications(panchangaData, prefs);
+
+        if (getAutoContinuousSyncPref()) {
+          getAccessToken().then((token) => {
+            if (token) {
+              syncMultiDayPanchangaEvents(token, panchangaData, 30).catch((err) =>
+                console.warn("Panchang Calendar auto-sync background notice:", err),
+              );
+            }
+          });
+        }
+      }
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") handlePrefsUpdate();
+    };
+    window.addEventListener("mahavtaar_notif_prefs_updated", handlePrefsUpdate);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("mahavtaar_notif_prefs_updated", handlePrefsUpdate);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [panchangaData]);
+
+  // Real-time sensory feedback (Audio Chime & Subtle Haptic Vibration) on live Tattva transitions
+  const prevActiveTattvaKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!panchangaData) return;
+    const interval = setInterval(() => {
+      const nowMs = Date.now();
+      const currentHoraState = resolveCurrentHora(nowMs, panchangaData);
+      if (currentHoraState?.activeTattva) {
+        const currentKey = `${currentHoraState.activeTattva.sanskrit}_${currentHoraState.activeTattva.startTimeMs}`;
+        if (prevActiveTattvaKeyRef.current && prevActiveTattvaKeyRef.current !== currentKey) {
+          triggerTattvaSensoryFeedback(currentHoraState.activeTattva.sanskrit);
+        }
+        prevActiveTattvaKeyRef.current = currentKey;
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [panchangaData]);
+
+  useEffect(() => {
+    if (theme === "nightSky") {
+      document.documentElement.classList.add("dark");
+      document.body.classList.add("theme-night-sky");
+    } else {
+      document.documentElement.classList.remove("dark");
+      document.body.classList.remove("theme-night-sky");
+    }
+  }, [theme]);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    const timer = setTimeout(() => {
+      setToastMessage((prev) => (prev === msg ? null : prev));
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Save current preferences to device localStorage
+  const persistSettings = useCallback(
+    (
+      newLang: Language = lang,
+      newAyanamsa: CoordinateSelection = ayanamsa,
+      newMonthSystem: MonthSystem = monthSystem,
+      newCity: string = currentCity,
+      newCoords: typeof customCoords = customCoords,
+      newTheme: AppTheme = theme,
+      newBirthNakshatra: number = birthNakshatra,
+    ) => {
+      saveUserSettings({
+        lang: newLang,
+        ayanamsa: newAyanamsa,
+        monthSystem: newMonthSystem,
+        currentCity: newCity,
+        customCoords: newCoords,
+        theme: newTheme,
+        birthNakshatra: newBirthNakshatra,
+      });
+    },
+    [lang, ayanamsa, monthSystem, currentCity, customCoords, theme],
+  );
+
+  const handleToggleTheme = useCallback(() => {
+    const nextTheme: AppTheme = theme === "nightSky" ? "parchment" : "nightSky";
+    setTheme(nextTheme);
+    persistSettings(lang, ayanamsa, monthSystem, currentCity, customCoords, nextTheme);
+    showToast(nextTheme === "nightSky" ? t.switchToNightSky : t.switchToParchment);
+  }, [
+    theme,
+    lang,
+    ayanamsa,
+    monthSystem,
+    currentCity,
+    customCoords,
+    persistSettings,
+    showToast,
+    t.switchToNightSky,
+    t.switchToParchment,
+  ]);
+
+  // Take device location (GPS)
+  const handleDetectDeviceLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      showToast("Geolocation is not supported on this device/browser.");
+      return;
+    }
+
+    setIsDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const accuracy = Math.round(pos.coords.accuracy || 0);
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
+
+        let nearestCityName: string | undefined;
+        try {
+          const res = await fetch(`/api/nearest-city?lat=${lat}&lon=${lon}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.city?.name) {
+              nearestCityName = data.city.name.split(",")[0].trim();
+            }
+          }
+        } catch {
+          // ignore lookup failure
+        }
+
+        const name = nearestCityName
+          ? `${nearestCityName} (GPS)`
+          : `GPS (${lat.toFixed(3)}°, ${lon.toFixed(3)}°)`;
+
+        const newCoords = {
+          lat,
+          lon,
+          tz,
+          name,
+          isDeviceLocation: true,
+          accuracyMeters: accuracy,
+        };
+
+        setCustomCoords(newCoords);
+        setCurrentCity(name);
+        setIsDetectingGps(false);
+
+        // Automatically persist device location setting
+        persistSettings(lang, ayanamsa, monthSystem, name, newCoords);
+        showToast(`${t.locationDetected}: ${name}`);
+      },
+      (err) => {
+        setIsDetectingGps(false);
+        let msg = "Could not access device GPS.";
+        if (err.code === err.PERMISSION_DENIED) {
+          msg = "Location permission was denied. Please allow GPS access in your browser.";
+        } else if (err.code === err.TIMEOUT) {
+          msg = "Location request timed out. Please try again.";
+        }
+        showToast(msg);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 0,
+      },
+    );
+  }, [lang, ayanamsa, monthSystem, persistSettings, showToast, t.locationDetected]);
+
+  // Fetch Panchanga data whenever date, city/coords, or calculation settings change
+  const fetchPanchanga = useCallback(() => {
+    setError(null);
+
+    const cacheKey = getPanchangaCacheKey(
+      currentDate,
+      currentCity,
+      customCoords,
+      monthSystem,
+      ayanamsa,
+    );
+
+    // SWR Pattern: Immediate hydration from localStorage cache if available
+    const cachedData = loadCachedPanchanga(cacheKey);
+    if (cachedData) {
+      setPanchangaData(cachedData);
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
+
+    let url = `/api/panchanga?date=${encodeURIComponent(currentDate)}&month_system=${monthSystem}&ayanamsa=${ayanamsa}`;
+
+    if (customCoords) {
+      url += `&lat=${customCoords.lat}&lon=${customCoords.lon}&tz=${encodeURIComponent(
+        customCoords.tz,
+      )}&city=${encodeURIComponent(customCoords.name)}`;
+    } else {
+      url += `&city=${encodeURIComponent(currentCity)}`;
+    }
+
+    let attempt = 0;
+    const maxRetries = 4;
+    const delays = [500, 1000, 1800, 3000];
+
+    const attemptFetch = () => {
+      fetch(url)
+        .then(async (res) => {
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Calculation error (Status ${res.status})`);
+          }
+          return res.json();
+        })
+        .then((data: PanchangaResponse) => {
+          setPanchangaData(data);
+          saveCachedPanchanga(cacheKey, data);
+          setError(null);
+          setIsLoading(false);
+        })
+        .catch((err: Error) => {
+          if (attempt < maxRetries) {
+            const delay = delays[attempt] || 1500;
+            attempt++;
+            setTimeout(attemptFetch, delay);
+            return;
+          }
+
+          console.warn("Panchanga fetch error after retries:", err);
+
+          // If cached data is already active on screen, don't interrupt the user
+          if (cachedData) {
+            setIsLoading(false);
+            return;
+          }
+
+          // Fallback to any recent valid calculation on this device
+          const fallback = loadLastSuccessfulPanchanga();
+          if (fallback) {
+            setPanchangaData(fallback);
+            setIsLoading(false);
+            showToast("Showing saved offline calculation. Tap Retry to refresh.");
+            return;
+          }
+
+          setError(err.message || "Failed to calculate Panchanga for this date and location.");
+          setIsLoading(false);
+        });
+    };
+
+    attemptFetch();
+  }, [currentDate, currentCity, customCoords, monthSystem, ayanamsa, showToast]);
+
+  useEffect(() => {
+    fetchPanchanga();
+  }, [fetchPanchanga]);
+
+  // Auto-refetch when network reconnects
+  useEffect(() => {
+    const handleOnline = () => {
+      fetchPanchanga();
+    };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [fetchPanchanga]);
+
+  const handleSelectCity = (city: CityLocation, saveDefault: boolean = true) => {
+    const coords = {
+      lat: city.latitude,
+      lon: city.longitude,
+      tz: city.timezone || "Asia/Kolkata",
+      name: city.name,
+      isDeviceLocation: false,
+    };
+    setCustomCoords(coords);
+    setCurrentCity(city.name);
+    if (saveDefault) {
+      persistSettings(lang, ayanamsa, monthSystem, city.name, coords);
+      showToast(t.settingsSavedToast);
+    }
+  };
+
+  const handleSelectCustom = (
+    lat: number,
+    lon: number,
+    tz: string,
+    name: string,
+    isDeviceLocation: boolean = false,
+    accuracyMeters?: number,
+    saveDefault: boolean = true,
+  ) => {
+    const newCoords = {
+      lat,
+      lon,
+      tz,
+      name,
+      isDeviceLocation,
+      accuracyMeters,
+    };
+    setCustomCoords(newCoords);
+    setCurrentCity(name);
+    if (saveDefault) {
+      persistSettings(lang, ayanamsa, monthSystem, name, newCoords);
+      showToast(t.settingsSavedToast);
+    }
+  };
+
+  const handleUpdateSettings = (
+    newAyanamsa: CoordinateSelection,
+    newMonthSystem: MonthSystem,
+    newTheme?: AppTheme,
+    newBirthNakshatra?: number,
+  ) => {
+    const saveToDevice = true; // simplifying, as SettingsModal doesn't pass boolean anymore
+    setAyanamsa(newAyanamsa);
+    setMonthSystem(newMonthSystem);
+    const activeTheme = newTheme || theme;
+    if (newTheme && newTheme !== theme) {
+      setTheme(newTheme);
+    }
+    if (saveToDevice) {
+      persistSettings(lang, newAyanamsa, newMonthSystem, currentCity, customCoords, activeTheme);
+      showToast(t.settingsSavedToast);
+    }
+  };
+
+  const handleResetDefaults = () => {
+    clearUserSettings();
+    setLang(DEFAULT_USER_SETTINGS.lang);
+    setAyanamsa(DEFAULT_USER_SETTINGS.ayanamsa);
+    setMonthSystem(DEFAULT_USER_SETTINGS.monthSystem);
+    setCurrentCity(DEFAULT_USER_SETTINGS.currentCity);
+    setCustomCoords(DEFAULT_USER_SETTINGS.customCoords);
+    setTheme(DEFAULT_USER_SETTINGS.theme || "parchment");
+    showToast("Settings reset to default");
+  };
+
+  const handleLangChange = (newLang: Language) => {
+    setLang(newLang);
+    persistSettings(newLang, ayanamsa, monthSystem, currentCity, customCoords, theme);
+  };
+
+  // If no user is authenticated, render the secure Login Portal Gateway
+  if (!currentUser) {
+    return (
+      <LoginPortalView
+        lang={lang}
+        onLangChange={handleLangChange}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          showToast(
+            lang === "hi"
+              ? `स्वागतम्, ${user.fullName} (${user.role === "admin" ? "प्रशासक" : "उपयोगकर्ता"})!`
+              : `Welcome, ${user.fullName} (${user.role.toUpperCase()})!`,
+          );
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      id="app-root-container"
+      data-theme={theme}
+      className={`flex h-screen overflow-hidden font-sans antialiased transition-colors duration-300 ${
+        theme === "nightSky"
+          ? "theme-night-sky bg-[#0b0f19] text-slate-100 selection:bg-indigo-900 selection:text-amber-200"
+          : "theme-parchment bg-[#f6f4f0] text-stone-900 selection:bg-indigo-200 selection:text-indigo-900"
+      }`}
+    >
+      {/* Premium Cosmic Overlay Texture */}
+      <div className="pointer-events-none fixed inset-0 mix-blend-overlay opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] z-0"></div>
+
+      {/* Sidebar (Desktop Only) */}
+      <aside
+        className={`hidden lg:flex flex-col ${
+          isSidebarCollapsed ? "w-20" : "w-72"
+        } backdrop-blur-xl border-r z-50 transition-all duration-300 ${
+          theme === "nightSky"
+            ? "bg-[#0e1424]/90 border-indigo-950/60 shadow-[4px_0_24px_-10px_rgba(0,0,0,0.6)]"
+            : "bg-white/80 border-amber-200/50 shadow-[4px_0_24px_-10px_rgba(0,0,0,0.05)]"
+        }`}
+      >
+        <div
+          className={`p-4 border-b ${
+            theme === "nightSky" ? "border-indigo-950/60" : "border-amber-200/50"
+          } flex items-center justify-between`}
+        >
+          <div className="flex items-center space-x-3 overflow-hidden">
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl shadow-md ring-1 ${
+                theme === "nightSky"
+                  ? "bg-gradient-to-br from-indigo-700 to-indigo-950 text-amber-300 ring-indigo-500/30"
+                  : "bg-gradient-to-br from-amber-600 to-amber-800 text-white ring-amber-900/20"
+              }`}
+            >
+              <Sun className="h-5 w-5 text-amber-100" />
+            </div>
+            {!isSidebarCollapsed && (
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center space-x-1.5">
+                  <h1
+                    className={`text-base font-black tracking-tight font-serif-vedic truncate ${
+                      theme === "nightSky" ? "text-white" : "text-stone-900"
+                    }`}
+                  >
+                    {t.appName}
+                  </h1>
+                  <span
+                    className={`inline-flex items-center rounded-full px-1.5 py-0.2 text-[9px] font-bold border uppercase shrink-0 ${
+                      theme === "nightSky"
+                        ? "bg-indigo-950/80 text-amber-300 border-indigo-700/60"
+                        : "bg-amber-100 text-amber-900 border-amber-300"
+                    }`}
+                  >
+                    Drik
+                  </span>
+                </div>
+                <p
+                  className={`text-[10px] font-sans truncate ${
+                    theme === "nightSky" ? "text-slate-400" : "text-stone-500"
+                  }`}
+                >
+                  {t.appSubtitle}
+                </p>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+            title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            className="p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-slate-800 text-stone-400 hover:text-stone-700 dark:hover:text-slate-200 transition-colors shrink-0 cursor-pointer"
+          >
+            {isSidebarCollapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-4 hide-scrollbar">
+          {/* Section 0: Home Hub */}
+          <div>
+            <NavItem
+              icon={Home}
+              label={lang === "hi" ? "मुख्य पृष्ठ (होम हब)" : "Home Hub"}
+              subLabel={
+                lang === "hi" ? "कस्टमाइजेबल डैशबोर्ड व प्राथमिकताएं" : "Custom Dashboard & Sorting"
+              }
+              badge={lang === "hi" ? "केन्द्र" : "Hub"}
+              isActive={activeView === "home"}
+              onClick={() => setActiveView("home")}
+              theme={theme}
+            />
+          </div>
+
+          {/* Section 1: Core Panchanga & Timings */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-stone-400/90 mb-2 px-2.5 font-sans flex items-center justify-between">
+              <span>{lang === "hi" ? "पंचांग व काल" : "Panchanga & Time"}</span>
+              <span className="text-[9px] text-amber-600/70 font-mono">01</span>
+            </div>
+            <div className="space-y-1">
+              <NavItem
+                icon={Sun}
+                label={t.views.panchanga}
+                subLabel={
+                  lang === "hi"
+                    ? "पञ्च अङ्गानि • तिथि, वार, नक्षत्र"
+                    : "Five Limbs • Tithi, Nakshatra"
+                }
+                isActive={activeView === "panchanga"}
+                onClick={() => setActiveView("panchanga")}
+                theme={theme}
+              />
+              <NavItem
+                icon={ListTodo}
+                label={t.views.today}
+                subLabel={lang === "hi" ? "दैनिक समय-सारणी व अनुक्रम" : "Day Schedule & Timeline"}
+                isActive={activeView === "today"}
+                onClick={() => setActiveView("today")}
+                theme={theme}
+              />
+              <NavItem
+                icon={Clock}
+                label={t.views.timings}
+                subLabel={lang === "hi" ? "अभिजीत, ब्रह्म, राहु काल" : "Abhijit, Brahma, Rahu Kala"}
+                isActive={activeView === "timings"}
+                onClick={() => setActiveView("timings")}
+                theme={theme}
+              />
+            </div>
+          </div>
+
+          {/* Section 2: Vedic Astrology & Ephemeris */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-stone-400/90 mb-2 px-2.5 font-sans flex items-center justify-between">
+              <span>{lang === "hi" ? "ज्योतिष व कुण्डली" : "Astrology & Kundli"}</span>
+              <span className="text-[9px] text-amber-600/70 font-mono">02</span>
+            </div>
+            <div className="space-y-1">
+              <NavItem
+                icon={Moon}
+                label={t.views.planets}
+                subLabel={
+                  lang === "hi" ? "नवग्रह प्रत्यक्ष खगोलीय स्थिति" : "Navagraha Ephemeris & Ingress"
+                }
+                isActive={activeView === "planets"}
+                onClick={() => setActiveView("planets")}
+                theme={theme}
+              />
+              <NavItem
+                icon={Compass}
+                label={t.views.kundli}
+                subLabel={
+                  lang === "hi" ? "लग्न, विंशोत्तरी, KP, गोचर" : "Birth Charts, KP, Gochar, Dasha"
+                }
+                badge={lang === "hi" ? "11 विधाएं" : "11 Tabs"}
+                isActive={activeView === "kundli" || activeView === "lagna"}
+                onClick={() => setActiveView("kundli")}
+                theme={theme}
+              />
+              <NavItem
+                icon={Star}
+                label={t.views.navagraha}
+                subLabel={
+                  lang === "hi" ? "बीज मन्त्र, स्तोत्र व रत्न उपाय" : "Mantras, Stotram & Remedies"
+                }
+                isActive={activeView === "navagraha"}
+                onClick={() => setActiveView("navagraha")}
+                theme={theme}
+              />
+            </div>
+          </div>
+
+          {/* Section 3: Esoteric & Yoga */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-stone-400/90 mb-2 px-2.5 font-sans flex items-center justify-between">
+              <span>{lang === "hi" ? "स्वरोदय व तत्व" : "Esoteric & Swara"}</span>
+              <span className="text-[9px] text-amber-600/70 font-mono">03</span>
+            </div>
+            <div className="space-y-1">
+              <NavItem
+                icon={Wind}
+                label={t.views.swara}
+                subLabel={
+                  lang === "hi" ? "इड़ा, पिङ्गला, सुषुम्णा नाड़ी" : "Ida, Pingala & Breath Flow"
+                }
+                isActive={activeView === "swara"}
+                onClick={() => setActiveView("swara")}
+                theme={theme}
+              />
+              <NavItem
+                icon={Star}
+                label={t.views.navtara}
+                subLabel={
+                  lang === "hi" ? "जन्मतारा से सम्पद-विपत् चक्र" : "Janma to Ati-Mitra Matrix"
+                }
+                isActive={activeView === "navtara"}
+                onClick={() => setActiveView("navtara")}
+                theme={theme}
+              />
+              <NavItem
+                icon={Hourglass}
+                label={t.views.horas}
+                subLabel={
+                  lang === "hi" ? "सूर्योदय कालीन 24 होरा चक्र" : "24 Hourly Planetary Rulers"
+                }
+                isActive={activeView === "horas"}
+                onClick={() => setActiveView("horas")}
+                theme={theme}
+              />
+              <NavItem
+                icon={Sparkles}
+                label={t.views.tattva}
+                subLabel={lang === "hi" ? "पंच महाभूत तत्व काल गणना" : "Five Elemental Cycles"}
+                isActive={activeView === "tattva"}
+                onClick={() => setActiveView("tattva")}
+                theme={theme}
+              />
+            </div>
+          </div>
+
+          {/* Section 4: Festivals & Sync */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-stone-400/90 mb-2 px-2.5 font-sans flex items-center justify-between">
+              <span>{lang === "hi" ? "पर्व व सिंक" : "Festivals & Sync"}</span>
+              <span className="text-[9px] text-amber-600/70 font-mono">04</span>
+            </div>
+            <div className="space-y-1">
+              <NavItem
+                icon={Flame}
+                label={t.views.festivals}
+                subLabel={
+                  lang === "hi"
+                    ? "एकादशी, प्रदोष, संक्रांति व जयंतियां"
+                    : "Ekadashi, Pradosh & Vratas"
+                }
+                badge={lang === "hi" ? "पर्व" : "Vrat"}
+                isActive={activeView === "festivals"}
+                onClick={() => setActiveView("festivals")}
+                theme={theme}
+              />
+
+              {/* Google Calendar Quick Sync entry */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCalendarSyncOpen(true)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    theme === "nightSky"
+                      ? "bg-amber-500/10 border-amber-500/30 text-amber-200 hover:bg-amber-500/20"
+                      : "bg-amber-50/80 border-amber-200/90 text-amber-950 hover:bg-amber-100"
+                  }`}
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 text-amber-600 shrink-0">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold font-devanagari flex items-center justify-between">
+                      <span>{lang === "hi" ? "Google Calendar सिंक" : "Google Calendar Sync"}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 font-sans font-bold uppercase">
+                        Sync
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-stone-500 dark:text-slate-400 truncate">
+                      {lang === "hi" ? "दैनिक मुहूर्त व पंचांग" : "Daily Muhurta & Events"}
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Google Sheets Quick Export & Sync entry */}
+              <div className="pt-1.5">
+                <button
+                  type="button"
+                  onClick={() => setIsGoogleSheetsOpen(true)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    theme === "nightSky"
+                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/20"
+                      : "bg-emerald-50/80 border-emerald-200/90 text-emerald-950 hover:bg-emerald-100"
+                  }`}
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-600 shrink-0">
+                    <FileSpreadsheet className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold font-devanagari flex items-center justify-between">
+                      <span>{lang === "hi" ? "Google Sheets सिंक" : "Google Sheets Sync"}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 font-sans font-bold uppercase">
+                        Sheets
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-stone-500 dark:text-slate-400 truncate">
+                      {lang === "hi" ? "पंचांग, होरा व ग्रह तालिका" : "Panchanga, Horas & Grahas"}
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Admin Access & Permission Control in Sidebar */}
+              {currentUser.role === "admin" && (
+                <div className="pt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsAdminUsersOpen(true)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      theme === "nightSky"
+                        ? "bg-amber-500/10 border-amber-500/30 text-amber-200 hover:bg-amber-500/20"
+                        : "bg-amber-50/80 border-amber-300/80 text-amber-950 hover:bg-amber-100"
+                    }`}
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 text-amber-600 shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold font-devanagari flex items-center justify-between">
+                        <span>
+                          {lang === "hi" ? "यूजर व एक्सेस नियंत्रण" : "User Access Control"}
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 font-sans font-bold uppercase">
+                          Admin
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-stone-500 dark:text-slate-400 truncate">
+                        {lang === "hi" ? "गूगल शीट परमिशन मैट्रिक्स" : "Google Sheet RBAC"}
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* User Account & Logout in Sidebar */}
+        <div
+          className={`p-3 mx-4 mb-2 rounded-xl border flex items-center justify-between gap-2 shrink-0 ${
+            theme === "nightSky"
+              ? "bg-indigo-950/40 border-indigo-900/50 text-slate-200"
+              : "bg-amber-50/70 border-amber-200/70 text-stone-800"
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+              <UserIcon className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold truncate">{currentUser.fullName}</div>
+              <div className="text-[10px] text-stone-500 dark:text-slate-400 capitalize">
+                @{currentUser.username} • {currentUser.role}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            title={lang === "hi" ? "लॉगआउट" : "Logout"}
+            className="p-1.5 rounded-lg hover:bg-rose-500/20 text-rose-400 hover:text-rose-600 transition-colors cursor-pointer shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div
+          className={`p-5 border-t ${theme === "nightSky" ? "border-indigo-950/60" : "border-amber-200/50"}`}
+        >
+          <div className="text-[10px] uppercase tracking-widest text-stone-400 font-bold mb-1">
+            VSOP87 / ELP2000 Ephemeris
+          </div>
+          <div className="text-[10px] text-stone-400 font-medium">
+            NASA JPL Algorithms • Lahiri Ayanāṁśa
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        {/* Navigation Header with Language Switcher */}
+        <Header
+          currentDate={currentDate}
+          currentCity={currentCity}
+          isDeviceLocation={Boolean(customCoords?.isDeviceLocation)}
+          isDetectingLocation={isDetectingGps}
+          activeView={activeView}
+          panchangaData={panchangaData}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          onOpenAdminUsers={() => setIsAdminUsersOpen(true)}
+          onDateChange={setCurrentDate}
+          onViewChange={setActiveView}
+          onOpenLocation={() => setIsLocationOpen(true)}
+          onDetectDeviceLocation={handleDetectDeviceLocation}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenCalendarSync={() => setIsCalendarSyncOpen(true)}
+          onOpenGoogleSheets={() => setIsGoogleSheetsOpen(true)}
+          onPrint={() => setIsPrintOpen(true)}
+          lang={lang}
+          onLangChange={handleLangChange}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+        />
+
+        {/* Primary Vedic Horizontal Category Navigation */}
+        <SpiritualTabs
+          activeView={activeView}
+          onViewChange={setActiveView}
+          lang={lang}
+          theme={theme}
+          orderedViews={navPreferences.orderedViews}
+          currentUser={currentUser}
+        />
+
+        {/* Scrollable Content */}
+        <main
+          id="main-content"
+          className="flex-1 w-full overflow-y-auto relative z-10 hide-scrollbar pb-24 lg:pb-8"
+        >
+          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            {/* Spiritual Context Banner (shown on standard views) */}
+            {activeView !== "calendar" &&
+              activeView !== "home" &&
+              !error &&
+              !isLoading &&
+              panchangaData && (
+                <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                  <InvocationBanner lang={lang} theme={theme} data={panchangaData} />
+                </div>
+              )}
+
+            {/* Error State */}
+            {error && (
+              <div
+                id="error-banner"
+                className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50/90 dark:bg-rose-950/40 p-4 text-rose-900 dark:text-rose-200 shadow-sm max-w-5xl mx-auto"
+              >
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-bold">Calculation Notice</h4>
+                    <p className="text-xs text-rose-700 dark:text-rose-300 mt-0.5">{error}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  {customCoords && (
+                    <button
+                      onClick={() =>
+                        handleSelectCity(
+                          {
+                            name: "Bengaluru, IN",
+                            country: "IN",
+                            latitude: 12.9716,
+                            longitude: 77.5946,
+                            timezone: "Asia/Kolkata",
+                          },
+                          true,
+                        )
+                      }
+                      className="inline-flex items-center rounded-xl border border-rose-300 dark:border-rose-700 bg-white dark:bg-stone-900 px-3 py-1.5 text-xs font-semibold text-rose-800 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-stone-800 transition-colors"
+                    >
+                      Reset Location
+                    </button>
+                  )}
+                  <button
+                    onClick={fetchPanchanga}
+                    className="inline-flex items-center rounded-xl border border-rose-300 dark:border-rose-700 bg-white dark:bg-stone-900 px-3.5 py-1.5 text-xs font-bold text-rose-850 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-stone-800 transition-colors shadow-xs"
+                  >
+                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* View: Home Hub (Central Customizable Dashboard) */}
+            {activeView === "home" ? (
+              <div
+                id="view-home-hub"
+                className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto"
+              >
+                <HomeHubView
+                  data={panchangaData}
+                  lang={lang}
+                  theme={theme}
+                  navPreferences={navPreferences}
+                  onUpdateNavPreferences={handleUpdateNavPreferences}
+                  onSelectView={setActiveView}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                  onOpenCalendarSync={() => setIsCalendarSyncOpen(true)}
+                  onOpenGoogleSheets={() => setIsGoogleSheetsOpen(true)}
+                />
+              </div>
+            ) : VIEW_PERMISSIONS_MAP[activeView] &&
+              !hasUserPermission(currentUser, VIEW_PERMISSIONS_MAP[activeView]!) ? (
+              <div className="max-w-4xl mx-auto py-8">
+                <AccessDeniedCard
+                  user={currentUser}
+                  requiredPermission={VIEW_PERMISSIONS_MAP[activeView]!}
+                  onReturnHome={() => setActiveView("home")}
+                  lang={lang}
+                  theme={theme}
+                />
+              </div>
+            ) : isLoading && !panchangaData ? (
+              <div
+                id="loading-state"
+                className="flex flex-col items-center justify-center py-32 text-center"
+              >
+                <div className="flex h-14 w-14 animate-spin items-center justify-center rounded-full border-4 border-amber-200 border-t-amber-700 shadow-sm"></div>
+                <div className="mt-5 text-lg font-bold font-serif-vedic text-stone-900">
+                  {lang === "hi"
+                    ? "दृग्गणित अनुसार ग्रह स्थितियों एवं पंचांग की गणना जारी है..."
+                    : "Calculating Observational Planetary Positions & Panchanga..."}
+                </div>
+                <p className="text-xs text-stone-500 mt-2 max-w-sm font-sans mx-auto">
+                  Computing High-Precision Drik-Ganita Ephemeris for {currentCity}
+                </p>
+              </div>
+            ) : panchangaData ? (
+              <div className="max-w-7xl mx-auto">
+                {/* View: Daily Panchanga (Overview) */}
+                {activeView === "panchanga" && (
+                  <div
+                    id="view-daily-panchanga"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                  >
+                    <div className="flex items-center space-x-3 mb-8">
+                      <div className="h-px bg-gradient-to-r from-transparent to-amber-200/80 flex-1"></div>
+                      <h2 className="text-sm font-bold uppercase tracking-widest text-amber-800 flex items-center gap-2 px-2">
+                        <Sun className="w-4 h-4 text-amber-600" />
+                        {lang === "hi" ? "दैनिक पंचांग सारांश" : "Daily Panchanga Overview"}
+                      </h2>
+                      <div className="h-px bg-gradient-to-l from-transparent to-amber-200/80 flex-1"></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+                      <div className="lg:col-span-12 space-y-10">
+                        <section>
+                          <RunningNowWidget data={panchangaData} lang={lang} theme={theme} />
+                        </section>
+                      </div>
+                      <div className="lg:col-span-8 space-y-10">
+                        <section>
+                          <PanchangaSummaryCard data={panchangaData} lang={lang} theme={theme} />
+                        </section>
+                        <section>
+                          <div className="flex items-center gap-2.5 mb-4 px-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
+                            <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-500">
+                              {lang === "hi" ? "पंचांग के पांच अंग" : "The Five Angas"}
+                            </h3>
+                          </div>
+                          <FiveAngasCard data={panchangaData} lang={lang} theme={theme} />
+                        </section>
+                      </div>
+
+                      <div className="lg:col-span-4 space-y-10">
+                        <section>
+                          <div className="flex items-center gap-2.5 mb-4 px-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
+                            <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-500">
+                              {lang === "hi" ? "चंद्र कला एवं स्थिति" : "Lunar Phase & State"}
+                            </h3>
+                          </div>
+                          <MoonPhaseVisualizer data={panchangaData} lang={lang} theme={theme} />
+                        </section>
+
+                        <section>
+                          <div className="flex items-center gap-2.5 mb-4 px-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"></span>
+                            <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-500">
+                              {lang === "hi" ? "आज के व्रत एवं त्यौहार" : "Festivals & Vratas"}
+                            </h3>
+                          </div>
+                          <FestivalCard data={panchangaData} lang={lang} theme={theme} />
+                        </section>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* View: Unified Today / Daily Schedule */}
+                {activeView === "today" && (
+                  <div
+                    id="view-today-schedule"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                  >
+                    <TodayScheduleView
+                      data={panchangaData}
+                      lang={lang}
+                      theme={theme}
+                      currentDateStr={currentDate}
+                      onSelectDate={setCurrentDate}
+                      onOpenSettings={() => setIsSettingsOpen(true)}
+                      onOpenCalendarSync={() => setIsCalendarSyncOpen(true)}
+                    />
+                  </div>
+                )}
+                {activeView === "timings" && (
+                  <div
+                    id="view-timings-dedicated"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                  >
+                    <div className="flex items-center space-x-3 mb-8">
+                      <div className="h-px bg-gradient-to-r from-transparent to-amber-200/80 flex-1"></div>
+                      <h2 className="text-sm font-bold uppercase tracking-widest text-amber-800 flex items-center gap-2 px-2">
+                        <Clock className="w-4 h-4 text-amber-600" />
+                        {lang === "hi" ? "मुहूर्त एवं समय" : "Muhurtas & Timings"}
+                      </h2>
+                      <div className="h-px bg-gradient-to-l from-transparent to-amber-200/80 flex-1"></div>
+                    </div>
+
+                    <div className="flex flex-col space-y-10">
+                      <section>
+                        <MuhurtaTimelineBar data={panchangaData} lang={lang} theme={theme} />
+                      </section>
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+                        <div className="lg:col-span-4">
+                          <section className="sticky top-6">
+                            <div className="flex items-center gap-2.5 mb-4 px-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                              <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-500">
+                                {lang === "hi" ? "वर्तमान मुहूर्त" : "Active Muhurta"}
+                              </h3>
+                            </div>
+                            <CurrentMuhurtaWidget data={panchangaData} lang={lang} theme={theme} />
+                          </section>
+                        </div>
+                        <div className="lg:col-span-8 space-y-10">
+                          <section>
+                            <div className="flex items-center gap-2.5 mb-4 px-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
+                              <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-500">
+                                {lang === "hi" ? "शुभ एवं अशुभ समय" : "Auspicious & Inauspicious"}
+                              </h3>
+                            </div>
+                            <AuspiciousTimingsCard data={panchangaData} lang={lang} theme={theme} />
+                          </section>
+                          <section>
+                            <div className="flex items-center gap-2.5 mb-4 px-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.6)]"></span>
+                              <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-500">
+                                {lang === "hi" ? "गौरी एवं चौघड़िया" : "Gauri & Choghadiya"}
+                              </h3>
+                            </div>
+                            <GauriChoghadiyaCard data={panchangaData} lang={lang} theme={theme} />
+                          </section>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* View: Planetary Ephemeris Dedicated */}
+                {activeView === "planets" && (
+                  <div
+                    id="view-planets-dedicated"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                  >
+                    <div className="flex items-center space-x-3 mb-8">
+                      <div className="h-px bg-gradient-to-r from-transparent to-amber-200/80 flex-1"></div>
+                      <h2 className="text-sm font-bold uppercase tracking-widest text-amber-800 flex items-center gap-2 px-2">
+                        <Moon className="w-4 h-4 text-amber-600" />
+                        {lang === "hi" ? "ग्रह स्थिति (गोचर)" : "Planetary Ephemeris"}
+                      </h2>
+                      <div className="h-px bg-gradient-to-l from-transparent to-amber-200/80 flex-1"></div>
+                    </div>
+
+                    <div className="space-y-10">
+                      <NextMajorIngressWidget data={panchangaData} lang={lang} theme={theme} />
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+                        <div className="lg:col-span-4 space-y-10">
+                          <section>
+                            <div className="flex items-center gap-2.5 mb-4 px-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
+                              <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-500">
+                                {lang === "hi" ? "चंद्र कला" : "Lunar Phase"}
+                              </h3>
+                            </div>
+                            <MoonPhaseVisualizer data={panchangaData} lang={lang} theme={theme} />
+                          </section>
+                        </div>
+                        <div className="lg:col-span-8">
+                          <section>
+                            <div className="flex items-center gap-2.5 mb-4 px-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]"></span>
+                              <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-500">
+                                {lang === "hi" ? "नवग्रह स्पष्ट" : "Navagraha Positions"}
+                              </h3>
+                            </div>
+                            <PlanetaryPositionsCard
+                              data={panchangaData}
+                              lang={lang}
+                              theme={theme}
+                            />
+                          </section>
+                        </div>
+                      </div>
+
+                      <section>
+                        <div className="flex items-center gap-2.5 mb-4 px-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
+                          <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-500">
+                            {lang === "hi"
+                              ? "ग्रह गोचर एवं राशि संक्रमण"
+                              : "Planet Transitions & Ingress (Graha Gochara)"}
+                          </h3>
+                        </div>
+                        <PlanetTransitionsCard data={panchangaData} lang={lang} theme={theme} />
+                      </section>
+                    </div>
+                  </div>
+                )}
+
+                {/* View: Janm Kundli Dedicated */}
+                {(activeView === "kundli" || activeView === "lagna") && (
+                  <div
+                    id="view-kundli-dedicated"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto"
+                  >
+                    <KundliView
+                      initialCity={currentCity}
+                      initialLat={customCoords?.lat}
+                      initialLon={customCoords?.lon}
+                      initialTimezone={customCoords?.tz}
+                      initialAyanamsa={ayanamsa}
+                    />
+                  </div>
+                )}
+
+                {/* View: Navagraha Mantras & Info */}
+                {activeView === "navagraha" && (
+                  <div
+                    id="view-navagraha"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto"
+                  >
+                    <div className="flex items-center space-x-3 mb-8">
+                      <div className="h-px bg-gradient-to-r from-transparent to-amber-200/80 flex-1"></div>
+                      <h2 className="text-sm font-bold uppercase tracking-widest text-amber-800 flex items-center gap-2 px-2">
+                        <Star className="w-4 h-4 text-amber-600" />
+                        {lang === "hi" ? "नवग्रह मन्त्र संग्रह" : "Navagraha Mantras"}
+                      </h2>
+                      <div className="h-px bg-gradient-to-l from-transparent to-amber-200/80 flex-1"></div>
+                    </div>
+
+                    <NavagrahaView lang={lang} theme={theme} />
+                  </div>
+                )}
+
+                {/* View: Dedicated Swara Yoga (Shiva Swarodaya) */}
+                {activeView === "swara" && (
+                  <div
+                    id="view-swara-dedicated"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto"
+                  >
+                    <div className="flex items-center space-x-3 mb-8">
+                      <div className="h-px bg-gradient-to-r from-transparent to-amber-200/80 flex-1"></div>
+                      <h2 className="text-sm font-bold uppercase tracking-widest text-amber-800 flex items-center gap-2 px-2">
+                        <Wind className="w-4 h-4 text-amber-600" />
+                        {lang === "hi" ? "शिव स्वरोदय" : "Shiva Swarodaya"}
+                      </h2>
+                      <div className="h-px bg-gradient-to-l from-transparent to-amber-200/80 flex-1"></div>
+                    </div>
+
+                    <section className="space-y-6">
+                      <SwaraYogaCard
+                        data={panchangaData}
+                        lang={lang}
+                        theme={theme}
+                        onOpenCalendarSync={() => setIsCalendarSyncOpen(true)}
+                      />
+                    </section>
+                  </div>
+                )}
+
+                {/* View: Vedic Horas */}
+                {activeView === "navtara" && (
+                  <div
+                    id="view-navtara-dedicated"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto"
+                  >
+                    <NavtaraView
+                      data={panchangaData}
+                      lang={lang}
+                      theme={theme}
+                      birthNakshatra={birthNakshatra}
+                      onBirthNakshatraChange={(n) => {
+                        setBirthNakshatra(n);
+                        persistSettings(
+                          lang,
+                          ayanamsa,
+                          monthSystem,
+                          currentCity,
+                          customCoords,
+                          theme,
+                          n,
+                        );
+                      }}
+                    />
+                  </div>
+                )}
+
+                {activeView === "tattva" && (
+                  <div
+                    id="view-tattva"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto"
+                  >
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-sm font-bold uppercase tracking-widest text-amber-800 flex items-center gap-2 px-2">
+                        <Sparkles className="w-4 h-4 text-amber-600" />
+                        {lang === "hi" ? "तत्व दर्शन" : "Tattva System"}
+                      </h2>
+                      <div className="h-px bg-gradient-to-l from-transparent to-amber-200/80 flex-1"></div>
+                    </div>
+
+                    <section className="space-y-6">
+                      <TattvaView panchangaData={panchangaData} theme={theme} lang={lang} />
+                    </section>
+                  </div>
+                )}
+
+                {activeView === "horas" && (
+                  <div
+                    id="view-vedic-horas"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto"
+                  >
+                    <div className="flex items-center space-x-3 mb-8">
+                      <div className="h-px bg-gradient-to-r from-transparent to-amber-200/80 flex-1"></div>
+                      <h2 className="text-sm font-bold uppercase tracking-widest text-amber-800 flex items-center gap-2 px-2">
+                        <Clock className="w-4 h-4 text-amber-600" />
+                        {lang === "hi" ? "वैदिक होरा चक्र" : "Vedic Hora Chart"}
+                      </h2>
+                      <div className="h-px bg-gradient-to-l from-transparent to-amber-200/80 flex-1"></div>
+                    </div>
+
+                    <section className="space-y-6">
+                      <VedicHorasView
+                        panchangaData={panchangaData}
+                        lang={lang}
+                        onOpenGoogleSheets={() => setIsGoogleSheetsOpen(true)}
+                      />
+                    </section>
+                  </div>
+                )}
+
+                {/* View: Festivals & Vratas */}
+                {activeView === "festivals" && (
+                  <div
+                    id="view-festivals"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto"
+                  >
+                    <FestivalsView data={panchangaData} lang={lang} theme={theme} />
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {/* Footer inside scroll area */}
+            <footer
+              id="app-footer"
+              className="mt-8 border-t border-stone-200/50 pt-8 pb-4 text-xs text-stone-500 relative z-10"
+            >
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center justify-center space-x-2">
+                  <span className="font-serif-vedic font-black text-indigo-950 text-sm tracking-wide">
+                    {t.appName}
+                  </span>
+                  <span className="text-stone-300">•</span>
+                  <span className="font-devanagari font-semibold">
+                    {lang === "hi"
+                      ? "दृग्गणित पद्धति पर आधारित शुद्ध भारतीय पंचांग"
+                      : "Drig-ganita Observational Almanac System"}
+                  </span>
+                </div>
+              </div>
+            </footer>
+          </div>
+        </main>
+      </div>
+
+      {/* Modals */}
+      <GoogleCalendarSyncModal
+        isOpen={isCalendarSyncOpen}
+        onClose={() => setIsCalendarSyncOpen(false)}
+        panchangaData={panchangaData}
+        lang={lang}
+        theme={theme}
+      />
+
+      <GoogleSheetsModal
+        isOpen={isGoogleSheetsOpen}
+        onClose={() => setIsGoogleSheetsOpen(false)}
+        panchangaData={panchangaData}
+        lang={lang}
+        theme={theme}
+      />
+
+      <AdminUsersManagementModal
+        isOpen={isAdminUsersOpen}
+        onClose={() => setIsAdminUsersOpen(false)}
+        lang={lang}
+        theme={theme}
+        currentUser={currentUser}
+        onUsersUpdated={() => {
+          const fresh = getAuthenticatedUser();
+          setCurrentUser(fresh);
+        }}
+      />
+
+      <LocationModal
+        isOpen={isLocationOpen}
+        onClose={() => setIsLocationOpen(false)}
+        currentCity={currentCity}
+        customCoords={customCoords}
+        onSelectCity={handleSelectCity}
+        onSelectCustom={handleSelectCustom}
+        lang={lang}
+      />
+
+      <SettingsModal
+        birthNakshatra={birthNakshatra}
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        ayanamsa={ayanamsa}
+        monthSystem={monthSystem}
+        currentCity={currentCity}
+        customCoords={customCoords}
+        theme={theme}
+        onThemeChange={(newTheme) => {
+          setTheme(newTheme);
+          persistSettings(
+            lang,
+            ayanamsa,
+            monthSystem,
+            currentCity,
+            customCoords,
+            newTheme,
+            birthNakshatra,
+          );
+        }}
+        onUpdateSettings={handleUpdateSettings}
+        onResetDefaults={handleResetDefaults}
+        lang={lang}
+      />
+
+      {isPrintOpen && panchangaData && (
+        <PrintablePanchanga
+          data={panchangaData}
+          onClose={() => setIsPrintOpen(false)}
+          lang={lang}
+        />
+      )}
+
+      {/* Floating Toast Notification for Saved Settings & Device Location */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="fixed bottom-6 right-6 z-50 flex items-center space-x-2.5 rounded-2xl border border-amber-300/80 bg-stone-900/90 px-4 py-3 text-xs font-semibold text-white shadow-xl backdrop-blur-md"
+          >
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+              <Check className="h-3.5 w-3.5" />
+            </div>
+            <span>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Vedic Modules Drawer */}
+      <MobileMenuDrawer
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        activeView={activeView}
+        onSelectView={setActiveView}
+        lang={lang}
+        onLangChange={handleLangChange}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        onPrint={() => setIsPrintOpen(true)}
+        currentUser={currentUser}
+        onOpenAdminUsers={() => setIsAdminUsersOpen(true)}
+      />
+
+      {/* Mobile Safe Area Bottom Utility Dock */}
+      <MobileBottomNav
+        activeView={activeView}
+        onViewChange={setActiveView}
+        onOpenLocation={() => setIsLocationOpen(true)}
+        onOpenCalendarSync={() => setIsCalendarSyncOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenMenu={() => setIsMobileMenuOpen(true)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onOpenAdminUsers={() => setIsAdminUsersOpen(true)}
+        onOpenAuth={() => setIsGoogleSheetsOpen(true)}
+        lang={lang}
+        theme={theme}
+      />
+    </div>
+  );
+}

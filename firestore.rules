@@ -1,0 +1,551 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 0. Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Shared Security Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() &&
+             request.auth.token.email_verified == true &&
+             request.auth.token.email is string &&
+             request.auth.token.email.size() >= 3 &&
+             request.auth.token.email.size() <= 160;
+    }
+
+    function isBootstrapAdmin() {
+      return isVerifiedUser() &&
+             request.auth.token.email.lower() == 'jain9640@gmail.com';
+    }
+
+    function isActiveAdmin() {
+      return isBootstrapAdmin() ||
+             (isSignedIn() &&
+              exists(/databases/$(database)/documents/user_access/$(request.auth.uid)) &&
+              get(/databases/$(database)/documents/user_access/$(request.auth.uid)).data.role == 'ADMIN' &&
+              get(/databases/$(database)/documents/user_access/$(request.auth.uid)).data.status == 'ACTIVE');
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidAyanamsha(val) {
+      return val is string && val in ['citra', 'revati', 'rohini', 'pushya', 'mula', 'krishnamurti', 'raman', 'tropical'];
+    }
+
+    function isValidMonthSystem(val) {
+      return val is string && val in ['amanta', 'purnimanta'];
+    }
+
+    function isValidDateIso(val) {
+      return val is string && val.size() == 10 && val.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    function isValidRole(val) {
+      return val is string && val in ['ADMIN', 'USER'];
+    }
+
+    function isValidAccessStatus(val) {
+      return val is string && val in ['PENDING', 'ACTIVE', 'SUSPENDED'];
+    }
+
+    // --- RBAC & Session Validation Helpers ---
+    function isValidUserAccess(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidId(data.userId) &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             isValidRole(data.role) &&
+             isValidAccessStatus(data.status) &&
+             data.allowedPages is list && data.allowedPages.size() <= 30 &&
+             data.allowedFeatures is list && data.allowedFeatures.size() <= 60 &&
+             (!('authorizedByUid' in data) || (data.authorizedByUid is string && data.authorizedByUid.size() <= 128)) &&
+             (!('inviteHash' in data) || isValidId(data.inviteHash)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidEmailInvite(data, emailHash) {
+      return data.emailHash is string && data.emailHash == emailHash &&
+             isValidId(data.emailHash) &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+             isValidRole(data.role) &&
+             isValidAccessStatus(data.status) &&
+             data.allowedPages is list && data.allowedPages.size() <= 30 &&
+             data.allowedFeatures is list && data.allowedFeatures.size() <= 60 &&
+             data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidUserSession(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidId(data.userId) &&
+             data.activeSessionToken is string && data.activeSessionToken.size() >= 8 && data.activeSessionToken.size() <= 128 &&
+             data.deviceName is string && data.deviceName.size() >= 1 && data.deviceName.size() <= 100 &&
+             data.forcedLogout is bool &&
+             data.claimedAt is timestamp && data.claimedAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // --- Entity Validation Helpers ---
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidId(data.userId) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             data.language is string && data.language in ['en', 'hi'] &&
+             data.themeMode is string && data.themeMode in ['NIGHT_SKY', 'PARCHMENT', 'SYSTEM'] &&
+             isValidMonthSystem(data.monthSystem) &&
+             isValidAyanamsha(data.ayanamsha) &&
+             data.birthNakshatra is int && data.birthNakshatra >= 1 && data.birthNakshatra <= 27 &&
+             data.use24HourFormat is bool &&
+             data.notifySunrise is bool &&
+             data.notifySunset is bool &&
+             data.notifyTithiChange is bool &&
+             data.notifyNakshatraChange is bool &&
+             data.notifyVratReminders is bool &&
+             data.selectedLocationName is string && data.selectedLocationName.size() >= 1 && data.selectedLocationName.size() <= 120 &&
+             data.selectedLocationCountry is string && data.selectedLocationCountry.size() <= 80 &&
+             data.selectedLocationLat is number && data.selectedLocationLat >= -90 && data.selectedLocationLat <= 90 &&
+             data.selectedLocationLon is number && data.selectedLocationLon >= -180 && data.selectedLocationLon <= 180 &&
+             data.selectedLocationTz is string && data.selectedLocationTz.size() >= 1 && data.selectedLocationTz.size() <= 80 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidLocation(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidId(data.userId) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+             data.country is string && data.country.size() <= 80 &&
+             data.latitude is number && data.latitude >= -90 && data.latitude <= 90 &&
+             data.longitude is number && data.longitude >= -180 && data.longitude <= 180 &&
+             data.timezone is string && data.timezone.size() >= 1 && data.timezone.size() <= 80 &&
+             data.population is int && data.population >= 0 &&
+             data.gpsResolved is bool &&
+             data.customLocation is bool &&
+             data.defaultLocation is bool &&
+             (!('accuracyMeters' in data) || (data.accuracyMeters is number && data.accuracyMeters >= 0 && data.accuracyMeters <= 100000)) &&
+             data.savedAtMs is int && data.savedAtMs >= 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidNavtaraProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidId(data.userId) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.birthNakshatraIndex is int && data.birthNakshatraIndex >= 1 && data.birthNakshatraIndex <= 27 &&
+             data.birthPada is int && data.birthPada >= 1 && data.birthPada <= 4 &&
+             data.notes is string && data.notes.size() <= 1000 &&
+             data.defaultProfile is bool &&
+             data.updatedAtMs is int && data.updatedAtMs >= 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidNavtaraFeedback(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidId(data.userId) &&
+             isValidId(data.profileCloudId) &&
+             isValidDateIso(data.dateIso) &&
+             data.rating is string && data.rating in ['AUSPICIOUS', 'NEUTRAL', 'CAUTION'] &&
+             data.note is string && data.note.size() <= 2000 &&
+             data.updatedAtMs is int && data.updatedAtMs >= 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidNavtaraReport(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidId(data.userId) &&
+             data.profileCloudId is string && data.profileCloudId.size() >= 1 && data.profileCloudId.size() <= 128 &&
+             data.profileName is string && data.profileName.size() >= 1 && data.profileName.size() <= 100 &&
+             data.birthNakshatraIndex is int && data.birthNakshatraIndex >= 1 && data.birthNakshatraIndex <= 27 &&
+             data.birthPada is int && data.birthPada >= 1 && data.birthPada <= 4 &&
+             isValidDateIso(data.startDateIso) &&
+             isValidDateIso(data.endDateIso) &&
+             data.dateRange is bool &&
+             data.locationName is string && data.locationName.size() >= 1 && data.locationName.size() <= 120 &&
+             data.latitude is number && data.latitude >= -90 && data.latitude <= 90 &&
+             data.longitude is number && data.longitude >= -180 && data.longitude <= 180 &&
+             data.timezone is string && data.timezone.size() >= 1 && data.timezone.size() <= 80 &&
+             isValidAyanamsha(data.ayanamshaKey) &&
+             isValidMonthSystem(data.monthSystemKey) &&
+             data.auspiciousCount is int && data.auspiciousCount >= 0 && data.auspiciousCount <= 366 &&
+             data.mixedCount is int && data.mixedCount >= 0 && data.mixedCount <= 366 &&
+             data.cautionCount is int && data.cautionCount >= 0 && data.cautionCount <= 366 &&
+             data.neutralCount is int && data.neutralCount >= 0 && data.neutralCount <= 366 &&
+             data.notes is string && data.notes.size() <= 2000 &&
+             data.createdAtMs is int && data.createdAtMs >= 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidKundliChart(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidId(data.userId) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.birthYear is int && data.birthYear >= 1800 && data.birthYear <= 2200 &&
+             data.birthMonth is int && data.birthMonth >= 1 && data.birthMonth <= 12 &&
+             data.birthDay is int && data.birthDay >= 1 && data.birthDay <= 31 &&
+             data.birthHour is int && data.birthHour >= 0 && data.birthHour <= 23 &&
+             data.birthMinute is int && data.birthMinute >= 0 && data.birthMinute <= 59 &&
+             data.placeName is string && data.placeName.size() >= 1 && data.placeName.size() <= 120 &&
+             data.latitude is number && data.latitude >= -90 && data.latitude <= 90 &&
+             data.longitude is number && data.longitude >= -180 && data.longitude <= 180 &&
+             data.timezone is string && data.timezone.size() >= 1 && data.timezone.size() <= 80 &&
+             data.inputJson is string && data.inputJson.size() >= 2 && data.inputJson.size() <= 4000 &&
+             data.lagnaSignIndex is int && data.lagnaSignIndex >= 0 && data.lagnaSignIndex <= 11 &&
+             data.moonSignIndex is int && data.moonSignIndex >= 0 && data.moonSignIndex <= 11 &&
+             data.moonNakshatraNumber is int && data.moonNakshatraNumber >= 1 && data.moonNakshatraNumber <= 27 &&
+             data.createdAtMs is int && data.createdAtMs >= 0 &&
+             data.updatedAtMs is int && data.updatedAtMs >= 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // --- 0A. Role-Based Access Control (/user_access/{userId}) ---
+    match /user_access/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isActiveAdmin());
+      allow list: if isActiveAdmin();
+
+      allow create: if isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'email', 'role', 'status',
+                         'allowedPages', 'allowedFeatures', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'email', 'displayName', 'role', 'status',
+                         'allowedPages', 'allowedFeatures', 'authorizedByUid', 'inviteHash',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserAccess(incoming(), userId) &&
+                       (
+                         isActiveAdmin() ||
+                         (isOwner(userId) &&
+                          isVerifiedUser() &&
+                          incoming().email.lower() == request.auth.token.email.lower() &&
+                          'inviteHash' in incoming() &&
+                          isValidId(incoming().inviteHash) &&
+                          exists(/databases/$(database)/documents/email_invites/$(incoming().inviteHash)) &&
+                          get(/databases/$(database)/documents/email_invites/$(incoming().inviteHash)).data.email.lower() == request.auth.token.email.lower() &&
+                          incoming().role == get(/databases/$(database)/documents/email_invites/$(incoming().inviteHash)).data.role &&
+                          incoming().status == get(/databases/$(database)/documents/email_invites/$(incoming().inviteHash)).data.status &&
+                          incoming().allowedPages == get(/databases/$(database)/documents/email_invites/$(incoming().inviteHash)).data.allowedPages &&
+                          incoming().allowedFeatures == get(/databases/$(database)/documents/email_invites/$(incoming().inviteHash)).data.allowedFeatures &&
+                          incoming().authorizedByUid == get(/databases/$(database)/documents/email_invites/$(incoming().inviteHash)).data.createdByUid) ||
+                         (isOwner(userId) &&
+                          isVerifiedUser() &&
+                          incoming().email.lower() == request.auth.token.email.lower() &&
+                          incoming().role == 'USER' &&
+                          incoming().status == 'PENDING' &&
+                          incoming().allowedPages.size() == 0 &&
+                          incoming().allowedFeatures.size() == 0 &&
+                          !('authorizedByUid' in incoming()) &&
+                          !('inviteHash' in incoming()))
+                       );
+
+      allow update: if isValidId(userId) &&
+                       isActiveAdmin() &&
+                       isValidUserAccess(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'email', 'displayName', 'role', 'status',
+                         'allowedPages', 'allowedFeatures', 'authorizedByUid', 'updatedAt'
+                       ]);
+
+      allow delete: if isValidId(userId) && isActiveAdmin();
+    }
+
+    // --- 0B. Pre-Authorized Email Invites (/email_invites/{emailHash}) ---
+    match /email_invites/{emailHash} {
+      allow get: if isValidId(emailHash) &&
+                    (isActiveAdmin() ||
+                     (isVerifiedUser() &&
+                      (resource == null || resource.data.email.lower() == request.auth.token.email.lower())));
+      allow list: if isActiveAdmin();
+
+      allow create: if isValidId(emailHash) &&
+                       isActiveAdmin() &&
+                       incoming().keys().hasAll([
+                         'emailHash', 'email', 'role', 'status',
+                         'allowedPages', 'allowedFeatures', 'createdByUid',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'emailHash', 'email', 'role', 'status',
+                         'allowedPages', 'allowedFeatures', 'createdByUid',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidEmailInvite(incoming(), emailHash);
+
+      allow update: if isValidId(emailHash) &&
+                       isActiveAdmin() &&
+                       isValidEmailInvite(incoming(), emailHash) &&
+                       incoming().emailHash == existing().emailHash &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'email', 'role', 'status',
+                         'allowedPages', 'allowedFeatures', 'createdByUid', 'updatedAt'
+                       ]);
+
+      allow delete: if isValidId(emailHash) && isActiveAdmin();
+    }
+
+    // --- 0C. Single-Device Session Lock (/user_sessions/{userId}) ---
+    match /user_sessions/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isActiveAdmin());
+      allow list: if isActiveAdmin();
+
+      allow create: if isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'activeSessionToken', 'deviceName',
+                         'forcedLogout', 'claimedAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'activeSessionToken', 'deviceName',
+                         'forcedLogout', 'claimedAt', 'updatedAt'
+                       ]) &&
+                       isValidUserSession(incoming(), userId) &&
+                       ((isOwner(userId) && incoming().forcedLogout == false) || isActiveAdmin());
+
+      allow update: if isValidId(userId) &&
+                       isValidUserSession(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'activeSessionToken', 'deviceName', 'forcedLogout',
+                         'claimedAt', 'updatedAt'
+                       ]) &&
+                       ((isOwner(userId) && incoming().forcedLogout == false) || isActiveAdmin());
+
+      allow delete: if isValidId(userId) && isActiveAdmin();
+    }
+
+    // --- 1. User Profile & Preferences ---
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'language', 'themeMode', 'monthSystem', 'ayanamsha',
+                         'birthNakshatra', 'use24HourFormat', 'notifySunrise', 'notifySunset',
+                         'notifyTithiChange', 'notifyNakshatraChange', 'notifyVratReminders',
+                         'selectedLocationName', 'selectedLocationCountry', 'selectedLocationLat',
+                         'selectedLocationLon', 'selectedLocationTz', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'language', 'themeMode', 'monthSystem', 'ayanamsha',
+                         'birthNakshatra', 'use24HourFormat', 'notifySunrise', 'notifySunset',
+                         'notifyTithiChange', 'notifyNakshatraChange', 'notifyVratReminders',
+                         'selectedLocationName', 'selectedLocationCountry', 'selectedLocationLat',
+                         'selectedLocationLon', 'selectedLocationTz', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'language', 'themeMode', 'monthSystem', 'ayanamsha',
+                         'birthNakshatra', 'use24HourFormat', 'notifySunrise', 'notifySunset',
+                         'notifyTithiChange', 'notifyNakshatraChange', 'notifyVratReminders',
+                         'selectedLocationName', 'selectedLocationCountry', 'selectedLocationLat',
+                         'selectedLocationLon', 'selectedLocationTz', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // --- 2. Saved & Custom Locations ---
+      match /locations/{locationId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(locationId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(locationId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'name', 'country', 'latitude', 'longitude', 'timezone',
+                           'population', 'gpsResolved', 'customLocation', 'defaultLocation',
+                           'savedAtMs', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'country', 'latitude', 'longitude', 'timezone',
+                           'population', 'gpsResolved', 'customLocation', 'defaultLocation',
+                           'accuracyMeters', 'savedAtMs', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidLocation(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(locationId) &&
+                         isValidLocation(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'country', 'latitude', 'longitude', 'timezone',
+                           'population', 'gpsResolved', 'customLocation', 'defaultLocation',
+                           'accuracyMeters', 'savedAtMs', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(locationId);
+      }
+
+      // --- 3. Navtara Profiles ---
+      match /navtara_profiles/{profileId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(profileId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(profileId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'name', 'birthNakshatraIndex', 'birthPada',
+                           'notes', 'defaultProfile', 'updatedAtMs', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'birthNakshatraIndex', 'birthPada',
+                           'notes', 'defaultProfile', 'updatedAtMs', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidNavtaraProfile(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(profileId) &&
+                         isValidNavtaraProfile(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'birthNakshatraIndex', 'birthPada',
+                           'notes', 'defaultProfile', 'updatedAtMs', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(profileId);
+      }
+
+      // --- 4. Navtara Daily Journal Feedback ---
+      match /navtara_feedbacks/{feedbackId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(feedbackId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(feedbackId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'profileCloudId', 'dateIso', 'rating',
+                           'note', 'updatedAtMs', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'profileCloudId', 'dateIso', 'rating',
+                           'note', 'updatedAtMs', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidNavtaraFeedback(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(feedbackId) &&
+                         isValidNavtaraFeedback(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'profileCloudId', 'dateIso', 'rating',
+                           'note', 'updatedAtMs', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(feedbackId);
+      }
+
+      // --- 5. Saved Navtara Period Reports ---
+      match /navtara_reports/{reportId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(reportId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(reportId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'profileCloudId', 'profileName', 'birthNakshatraIndex', 'birthPada',
+                           'startDateIso', 'endDateIso', 'dateRange', 'locationName', 'latitude', 'longitude',
+                           'timezone', 'ayanamshaKey', 'monthSystemKey', 'auspiciousCount', 'mixedCount',
+                           'cautionCount', 'neutralCount', 'notes', 'createdAtMs', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'profileCloudId', 'profileName', 'birthNakshatraIndex', 'birthPada',
+                           'startDateIso', 'endDateIso', 'dateRange', 'locationName', 'latitude', 'longitude',
+                           'timezone', 'ayanamshaKey', 'monthSystemKey', 'auspiciousCount', 'mixedCount',
+                           'cautionCount', 'neutralCount', 'notes', 'createdAtMs', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidNavtaraReport(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(reportId) &&
+                         isValidNavtaraReport(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'profileCloudId', 'profileName', 'birthNakshatraIndex', 'birthPada',
+                           'startDateIso', 'endDateIso', 'dateRange', 'locationName', 'latitude', 'longitude',
+                           'timezone', 'ayanamshaKey', 'monthSystemKey', 'auspiciousCount', 'mixedCount',
+                           'cautionCount', 'neutralCount', 'notes', 'createdAtMs', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(reportId);
+      }
+
+      // --- 6. Saved Kundli Birth Charts ---
+      match /kundli_charts/{chartId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(chartId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(chartId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'name', 'birthYear', 'birthMonth', 'birthDay',
+                           'birthHour', 'birthMinute', 'placeName', 'latitude', 'longitude',
+                           'timezone', 'inputJson', 'lagnaSignIndex', 'moonSignIndex',
+                           'moonNakshatraNumber', 'createdAtMs', 'updatedAtMs', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'birthYear', 'birthMonth', 'birthDay',
+                           'birthHour', 'birthMinute', 'placeName', 'latitude', 'longitude',
+                           'timezone', 'inputJson', 'lagnaSignIndex', 'moonSignIndex',
+                           'moonNakshatraNumber', 'createdAtMs', 'updatedAtMs', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidKundliChart(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(chartId) &&
+                         isValidKundliChart(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'birthYear', 'birthMonth', 'birthDay',
+                           'birthHour', 'birthMinute', 'placeName', 'latitude', 'longitude',
+                           'timezone', 'inputJson', 'lagnaSignIndex', 'moonSignIndex',
+                           'moonNakshatraNumber', 'updatedAtMs', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(chartId);
+      }
+    }
+  }
+}

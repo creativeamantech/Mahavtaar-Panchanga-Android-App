@@ -1,0 +1,725 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, [data-theme="nightSky"], .theme-night-sky, .dark *));
+
+/*
+ * Spiritual-Modern Vedic Design System Tokens (Tailwind v4)
+ * Palette: Sacred Saffron, Temple Indigo, Warm Sand / Parchment, Surya Amber, Deep Charcoal.
+ * Built for WCAG AA compliance across both Light (Parchment) and Dark (Night Sky) modes.
+ */
+
+@theme inline {
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.5rem;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Semantic Vedic UI Tokens */
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-border-subtle: var(--border-subtle);
+  --color-auspicious: var(--auspicious);
+  --color-auspicious-subtle: var(--auspicious-subtle);
+  --color-inauspicious: var(--inauspicious);
+  --color-inauspicious-subtle: var(--inauspicious-subtle);
+  --color-caution: var(--caution);
+  --color-caution-subtle: var(--caution-subtle);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+
+  /* Vedic Spiritual Accent Tokens */
+  --color-saffron: var(--saffron);
+  --color-saffron-lt: var(--saffron-lt);
+  --color-saffron-light: var(--saffron-light);
+  --color-saffron-dark: var(--saffron-dark);
+  --color-indigo-temple: var(--indigo-temple);
+  --color-amber-sacred: var(--amber-sacred);
+  --color-parchment: var(--parchment);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: "Plus Jakarta Sans", "Noto Sans Devanagari", system-ui, -apple-system, sans-serif;
+  --font-serif: "Noto Serif", "Noto Serif Devanagari", Georgia, serif;
+  --font-devanagari: "Noto Sans Devanagari", "Noto Serif Devanagari", sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Parchment Light Mode — Semantic Surfaces & Text */
+  --surface-0: #FAF8F3;
+  --surface-1: #FFFFFF;
+  --surface-2: #F4F0E6;
+  --surface-3: #ECE6D8;
+  --text-1: #18181B;
+  --text-2: #52515E;
+  --text-3: #7A7889;
+  --border-subtle: #E6E2D8;
+
+  /* Auspiciousness & State Semantics (WCAG AA compliant) */
+  --auspicious: #0F766E;
+  --auspicious-subtle: #E3F6F3;
+  --inauspicious: #B4233C;
+  --inauspicious-subtle: #FDECEF;
+  --caution: #B45309;
+  --caution-subtle: #FEF3DC;
+  --info: #283593;
+  --info-subtle: #EEF0FB;
+
+  --background: #FAF8F3;
+  --foreground: #18181B;
+  --card: #FFFFFF;
+  --card-foreground: #18181B;
+  --popover: #FFFFFF;
+  --popover-foreground: #18181B;
+
+  /* Primary: Sacred Saffron-Ochre */
+  --primary: #D4680A;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #F4F0E6;
+  --secondary-foreground: #18181B;
+
+  --muted: #F4F0E6;
+  --muted-foreground: #52515E;
+
+  --accent: #FEF0E0;
+  --accent-foreground: #78350F;
+
+  --destructive: #B4233C;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E6E2D8;
+  --input: #E6E2D8;
+  --ring: #D4680A;
+
+  /* Vedic Specific */
+  --saffron: #D4680A;
+  --saffron-lt: #FEF0E0;
+  --saffron-light: #FFF4EB;
+  --saffron-dark: #9A3D02;
+  --indigo-temple: #1A1F5E;
+  --amber-sacred: #D97706;
+  --parchment: #FAF8F3;
+
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #18181B;
+  --sidebar-primary: #D4680A;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F4F0E6;
+  --sidebar-accent-foreground: #18181B;
+  --sidebar-border: #E6E2D8;
+  --sidebar-ring: #D4680A;
+}
+
+.dark,
+[data-theme="nightSky"],
+.theme-night-sky {
+  /* Night Sky Dark Mode — Semantic Surfaces & Text */
+  --surface-0: #0B0F1E;
+  --surface-1: #12182C;
+  --surface-2: #18203A;
+  --surface-3: #202A4A;
+  --text-1: #F3F4F8;
+  --text-2: #B3B9CC;
+  --text-3: #7E869E;
+  --border-subtle: rgba(148, 163, 196, 0.16);
+
+  /* Auspiciousness & State Semantics — Night Sky */
+  --auspicious: #2DD4BF;
+  --auspicious-subtle: rgba(45, 212, 191, 0.14);
+  --inauspicious: #FB7185;
+  --inauspicious-subtle: rgba(251, 113, 133, 0.14);
+  --caution: #FBBF24;
+  --caution-subtle: rgba(251, 191, 36, 0.14);
+  --info: #818CF8;
+  --info-subtle: rgba(129, 140, 248, 0.14);
+
+  --background: #0B0F1E;
+  --foreground: #F3F4F8;
+  --card: #12182C;
+  --card-foreground: #F3F4F8;
+  --popover: #12182C;
+  --popover-foreground: #F3F4F8;
+
+  --primary: #F59E0B;
+  --primary-foreground: #0B0F1E;
+
+  --secondary: #18203A;
+  --secondary-foreground: #F3F4F8;
+
+  --muted: #18203A;
+  --muted-foreground: #B3B9CC;
+
+  --accent: #202A4A;
+  --accent-foreground: #FBBF24;
+
+  --destructive: #FB7185;
+  --destructive-foreground: #0B0F1E;
+
+  --border: rgba(148, 163, 196, 0.16);
+  --input: rgba(148, 163, 196, 0.2);
+  --ring: #F59E0B;
+
+  /* Vedic Specific in Dark */
+  --saffron: #F59E0B;
+  --saffron-lt: rgba(245, 158, 11, 0.15);
+  --saffron-light: rgba(245, 158, 11, 0.12);
+  --saffron-dark: #FBBF24;
+  --indigo-temple: #312E81;
+  --amber-sacred: #FBBF24;
+  --parchment: #12182C;
+
+  --sidebar: #12182C;
+  --sidebar-foreground: #F3F4F8;
+  --sidebar-primary: #F59E0B;
+  --sidebar-primary-foreground: #0B0F1E;
+  --sidebar-accent: #18203A;
+  --sidebar-accent-foreground: #F3F4F8;
+  --sidebar-border: rgba(148, 163, 196, 0.16);
+  --sidebar-ring: #F59E0B;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    font-family:
+      "Plus Jakarta Sans",
+      "Noto Sans Devanagari",
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      sans-serif;
+    background-color: var(--surface-0);
+    color: var(--text-1);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100vh;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  body.theme-night-sky,
+  [data-theme="nightSky"] body,
+  html.dark body {
+    background-color: var(--surface-0);
+    color: var(--text-1);
+  }
+
+  :root {
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Prevent iOS auto-zoom on form focus */
+  @media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="search"],
+    input[type="number"],
+    input[type="date"],
+    input[type="time"],
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* Enforce 12px minimum typography floor across legacy micro-labels */
+.text-\[8px\],
+.text-\[9px\],
+.text-\[10px\],
+.text-\[11px\] {
+  font-size: 0.75rem !important;
+  line-height: 1.15rem !important;
+}
+
+/* Typography Scale Utilities */
+.type-display {
+  font-family: var(--font-serif);
+  font-size: clamp(1.625rem, 2.5vw, 2rem);
+  line-height: 1.28;
+  font-weight: 700;
+}
+
+.type-title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.type-heading {
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.type-body {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.55;
+  font-weight: 400;
+}
+
+.type-label {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.type-caption {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.tabular-time {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+@layer utilities {
+  .hide-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow:
+      0 8px 32px 0 rgba(31, 38, 135, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .glass-header {
+    background: rgba(250, 248, 245, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(214, 211, 209, 0.3);
+  }
+
+  /* Night Sky Glass Card & Header */
+  .theme-night-sky .glass-card,
+  [data-theme="nightSky"] .glass-card,
+  html.dark .glass-card {
+    background: rgba(14, 19, 32, 0.82) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(99, 102, 241, 0.22) !important;
+    box-shadow:
+      0 12px 36px 0 rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .theme-night-sky .glass-header,
+  [data-theme="nightSky"] .glass-header,
+  html.dark .glass-header {
+    background: rgba(11, 15, 25, 0.9) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(99, 102, 241, 0.24) !important;
+  }
+}
+
+/* Night Sky Context Overrides */
+.theme-night-sky,
+[data-theme="nightSky"],
+html.dark {
+  color-scheme: dark;
+}
+
+.theme-night-sky .bg-white,
+[data-theme="nightSky"] .bg-white,
+html.dark .bg-white {
+  background-color: #12182b !important;
+}
+
+.theme-night-sky .bg-stone-50,
+[data-theme="nightSky"] .bg-stone-50,
+html.dark .bg-stone-50 {
+  background-color: #0d1222 !important;
+}
+
+.theme-night-sky .bg-stone-100,
+[data-theme="nightSky"] .bg-stone-100,
+html.dark .bg-stone-100 {
+  background-color: #161e31 !important;
+}
+
+.theme-night-sky .bg-stone-200,
+[data-theme="nightSky"] .bg-stone-200,
+html.dark .bg-stone-200 {
+  background-color: #1e293b !important;
+}
+
+.theme-night-sky .bg-amber-50,
+[data-theme="nightSky"] .bg-amber-50,
+html.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.09) !important;
+}
+
+.theme-night-sky .bg-amber-100,
+[data-theme="nightSky"] .bg-amber-100,
+html.dark .bg-amber-100 {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+}
+
+.theme-night-sky .bg-emerald-50,
+[data-theme="nightSky"] .bg-emerald-50,
+html.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+}
+
+.theme-night-sky .bg-rose-50,
+[data-theme="nightSky"] .bg-rose-50,
+html.dark .bg-rose-50 {
+  background-color: rgba(244, 63, 94, 0.12) !important;
+}
+
+/* Text Colors */
+.theme-night-sky .text-stone-900,
+.theme-night-sky .text-stone-800,
+[data-theme="nightSky"] .text-stone-900,
+[data-theme="nightSky"] .text-stone-800,
+html.dark .text-stone-900,
+html.dark .text-stone-800 {
+  color: #f8fafc !important;
+}
+
+.theme-night-sky .text-stone-700,
+[data-theme="nightSky"] .text-stone-700,
+html.dark .text-stone-700 {
+  color: #e2e8f0 !important;
+}
+
+.theme-night-sky .text-stone-600,
+.theme-night-sky .text-stone-500,
+[data-theme="nightSky"] .text-stone-600,
+[data-theme="nightSky"] .text-stone-500,
+html.dark .text-stone-600,
+html.dark .text-stone-500 {
+  color: #94a3b8 !important;
+}
+
+.theme-night-sky .text-stone-400,
+[data-theme="nightSky"] .text-stone-400,
+html.dark .text-stone-400 {
+  color: #64748b !important;
+}
+
+.theme-night-sky .text-amber-950,
+.theme-night-sky .text-amber-900,
+.theme-night-sky .text-amber-800,
+[data-theme="nightSky"] .text-amber-950,
+[data-theme="nightSky"] .text-amber-900,
+[data-theme="nightSky"] .text-amber-800,
+html.dark .text-amber-950,
+html.dark .text-amber-900,
+html.dark .text-amber-800 {
+  color: #fbbf24 !important;
+}
+
+.theme-night-sky .text-amber-700,
+.theme-night-sky .text-amber-600,
+[data-theme="nightSky"] .text-amber-700,
+[data-theme="nightSky"] .text-amber-600,
+html.dark .text-amber-700,
+html.dark .text-amber-600 {
+  color: #f59e0b !important;
+}
+
+.theme-night-sky .text-indigo-950,
+.theme-night-sky .text-indigo-900,
+[data-theme="nightSky"] .text-indigo-950,
+[data-theme="nightSky"] .text-indigo-900,
+html.dark .text-indigo-950,
+html.dark .text-indigo-900 {
+  color: #c7d2fe !important;
+}
+
+.theme-night-sky .text-indigo-800,
+.theme-night-sky .text-indigo-700,
+[data-theme="nightSky"] .text-indigo-800,
+[data-theme="nightSky"] .text-indigo-700,
+html.dark .text-indigo-800,
+html.dark .text-indigo-700 {
+  color: #a5b4fc !important;
+}
+
+.theme-night-sky .text-emerald-900,
+.theme-night-sky .text-emerald-950,
+[data-theme="nightSky"] .text-emerald-900,
+[data-theme="nightSky"] .text-emerald-950,
+html.dark .text-emerald-900,
+html.dark .text-emerald-950 {
+  color: #6ee7b7 !important;
+}
+
+.theme-night-sky .text-rose-900,
+.theme-night-sky .text-rose-850,
+[data-theme="nightSky"] .text-rose-900,
+[data-theme="nightSky"] .text-rose-850,
+html.dark .text-rose-900,
+html.dark .text-rose-850 {
+  color: #fca5a5 !important;
+}
+
+/* Borders */
+.theme-night-sky .border-stone-200,
+.theme-night-sky .border-stone-100,
+[data-theme="nightSky"] .border-stone-200,
+[data-theme="nightSky"] .border-stone-100,
+html.dark .border-stone-200,
+html.dark .border-stone-100 {
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+.theme-night-sky .border-stone-300,
+[data-theme="nightSky"] .border-stone-300,
+html.dark .border-stone-300 {
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+.theme-night-sky .border-amber-200,
+.theme-night-sky .border-amber-300,
+[data-theme="nightSky"] .border-amber-200,
+[data-theme="nightSky"] .border-amber-300,
+html.dark .border-amber-200,
+html.dark .border-amber-300 {
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+/* Inputs & Dialogs */
+.theme-night-sky input,
+.theme-night-sky select,
+[data-theme="nightSky"] input,
+[data-theme="nightSky"] select,
+html.dark input,
+html.dark select {
+  background-color: #141b2f !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(99, 102, 241, 0.35) !important;
+}
+
+.theme-night-sky #location-modal-dialog,
+.theme-night-sky #settings-modal-dialog,
+[data-theme="nightSky"] #location-modal-dialog,
+[data-theme="nightSky"] #settings-modal-dialog,
+html.dark #location-modal-dialog,
+html.dark #settings-modal-dialog {
+  background-color: rgba(13, 17, 30, 0.96) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: #f1f5f9 !important;
+}
+
+.theme-night-sky #printable-panchanga-dialog,
+[data-theme="nightSky"] #printable-panchanga-dialog,
+html.dark #printable-panchanga-dialog {
+  background-color: #0f1527 !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: #f1f5f9 !important;
+}
+
+/* Calendar Cells in Night Sky */
+.theme-night-sky [id^="calendar-cell-"],
+[data-theme="nightSky"] [id^="calendar-cell-"],
+html.dark [id^="calendar-cell-"] {
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+.theme-night-sky [id^="calendar-cell-"]:hover,
+[data-theme="nightSky"] [id^="calendar-cell-"]:hover,
+html.dark [id^="calendar-cell-"]:hover {
+  background-color: rgba(30, 41, 69, 0.6) !important;
+}
+
+/* Print Overrides: Always clean light background for paper printing & PDF export */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  body,
+  .theme-night-sky,
+  [data-theme="nightSky"],
+  html.dark body {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Hide root background layout elements when printing modals */
+  #printable-navtara-modal,
+  #printable-panchanga-modal {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+  }
+
+  #printable-navtara-dialog,
+  #printable-panchanga-dialog {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  #navtara-report-sheet,
+  #print-sheet-content {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .print-no-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+
+.font-serif-vedic {
+  font-family: "Noto Serif", "Noto Serif Devanagari", "Cinzel", "Playfair Display", Georgia, serif;
+}
+
+.font-devanagari {
+  font-family: "Noto Sans Devanagari", "Noto Serif Devanagari", "Plus Jakarta Sans", sans-serif;
+  line-height: 1.6;
+}
+
+.font-vedic-sans {
+  font-family: "Noto Sans", "Plus Jakarta Sans", sans-serif;
+}
+
+/* Mobile Safe Area & Touch Target Utilities */
+.safe-bottom-pad {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+.touch-target-min {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Master Vedic Design Tokens from Reference */
+:root {
+  --saffron: #d4680a;
+  --saffron-lt: #fef0e0;
+  --saffron-md: #f0a44a;
+  --maroon: #7b1c3a;
+  --maroon-lt: #fce8ef;
+  --indigo-d: #1a1f5e;
+  --indigo-lt: #eef0fb;
+  --teal: #0e6b5e;
+  --teal-lt: #e0f5f1;
+  --slate: #3e4151;
+  --muted-vedic: #7c7f8e;
+  --border-vedic: #e4e2dd;
+  --bg-parchment: #fdfcf8;
+}
+
+/* Master reference card styling */
+.vedic-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid var(--border-vedic);
+  overflow: hidden;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.03);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.vedic-card:hover {
+  border-color: #d6d3cd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.theme-night-sky .vedic-card,
+[data-theme="nightSky"] .vedic-card,
+html.dark .vedic-card {
+  background: #12182b;
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.theme-night-sky .vedic-card:hover,
+[data-theme="nightSky"] .vedic-card:hover,
+html.dark .vedic-card:hover {
+  border-color: rgba(129, 140, 248, 0.35);
+}
+
+/* Category Navigation Scrollbar Hide */
+.cat-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+.cat-nav-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

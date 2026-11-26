@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mahavtaar Panchanga</string>
+    <string name="widget_name">अभी क्या चल रहा है (Running Now Live)</string>
+    <string name="widget_description">Shows all currently running Panchanga limbs, Muhurtas, Choghadiya, Hora, Tattva, and Swara Nadi live on your Home Screen.</string>
+    <string name="widget_hora_tattva_name">होरा, पंच-तत्व व स्वर नाड़ी लाइव (Hora, Tattva &amp; Swara)</string>
+    <string name="widget_hora_tattva_description">Live Planetary Hora, 5-Sub-Tattva window, Flowing Swara Nadi (Ida/Pingala), and Celestial/Tithi/Nakshatra Swara windows.</string>
+    <string name="widget_muhurta_name">शुभ मुहूर्त व चौघड़िया लाइव (Muhurta &amp; Choghadiya)</string>
+    <string name="widget_muhurta_description">Live running Auspicious/Inauspicious Muhurtas (Abhijit, Rahu Kala, Brahma, Amrita), active Choghadiya, and Sunrise/Sunset.</string>
+    <string name="widget_strip_name">रनिंग नाउ लाइव पट्टी (Running Now Strip)</string>
+    <string name="widget_strip_description">Sleek semi-transparent glass strip showing live Hora, Sub-Tattva, Swara Nadi, Tithi, and active Muhurta with live countdowns.</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_panchanga">Panchanga</string>
+    <string name="nav_calendar">Calendar</string>
+    <string name="nav_hora">Hora</string>
+    <string name="nav_more">More</string>
+    <string name="notification_channel_name">Panchanga Alerts</string>
+    <string name="notification_channel_description">Sunrise, Sunset, Tithi transitions, and Vrat observance reminders.</string>
+    <string name="running_now_channel_name">Running Now (Live Status)</string>
+    <string name="running_now_channel_description">Opt-in permanent high-priority notification displaying live Hora, Tattva, Nadi, and Tithi.</string>
+</resources>

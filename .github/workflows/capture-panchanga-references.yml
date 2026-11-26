@@ -1,0 +1,43 @@
+name: Capture Panchanga Golden References
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/capture-panchanga-reference.ts"
+      - ".github/workflows/capture-panchanga-references.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install
+      - name: Capture source-engine reference fixtures
+        run: bun run scripts/capture-panchanga-reference.ts
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+      - name: Commit versioned reference corpus
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reference/panchanga/v1/
+          if ! git diff --cached --quiet; then
+            git commit -m "test: capture Panchanga golden reference corpus"
+            git push
+          fi
+      - name: Upload reference corpus
+        uses: actions/upload-artifact@v4
+        with:
+          name: panchanga-golden-reference-v1
+          path: reference/panchanga/v1/
+          if-no-files-found: error
+          retention-days: 30

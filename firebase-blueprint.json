@@ -1,0 +1,741 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile, preferences, and active calculation defaults synced across devices. Timestamps must be written with FieldValue.serverTimestamp().",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID owning this profile document."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Optional Google account display name."
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "hi"],
+          "description": "Preferred UI language code."
+        },
+        "themeMode": {
+          "type": "string",
+          "enum": ["NIGHT_SKY", "PARCHMENT", "SYSTEM"],
+          "description": "Preferred Material 3 theme mode."
+        },
+        "monthSystem": {
+          "type": "string",
+          "enum": ["amanta", "purnimanta"],
+          "description": "Lunar month reckoning system."
+        },
+        "ayanamsha": {
+          "type": "string",
+          "enum": ["citra", "revati", "rohini", "pushya", "mula", "krishnamurti", "raman", "tropical"],
+          "description": "Active sidereal ayanamsha or tropical selection."
+        },
+        "birthNakshatra": {
+          "type": "integer",
+          "description": "Default Janma Nakshatra index (1..27)."
+        },
+        "use24HourFormat": {
+          "type": "boolean",
+          "description": "Whether times display in 24-hour format."
+        },
+        "notifySunrise": {
+          "type": "boolean",
+          "description": "Sunrise alert preference."
+        },
+        "notifySunset": {
+          "type": "boolean",
+          "description": "Sunset alert preference."
+        },
+        "notifyTithiChange": {
+          "type": "boolean",
+          "description": "Tithi transition alert preference."
+        },
+        "notifyNakshatraChange": {
+          "type": "boolean",
+          "description": "Nakshatra transition alert preference."
+        },
+        "notifyVratReminders": {
+          "type": "boolean",
+          "description": "Vrat observance reminder preference."
+        },
+        "selectedLocationName": {
+          "type": "string",
+          "description": "Active city or custom coordinate label."
+        },
+        "selectedLocationCountry": {
+          "type": "string",
+          "description": "Country or Custom label."
+        },
+        "selectedLocationLat": {
+          "type": "number",
+          "description": "Active latitude in decimal degrees."
+        },
+        "selectedLocationLon": {
+          "type": "number",
+          "description": "Active longitude in decimal degrees."
+        },
+        "selectedLocationTz": {
+          "type": "string",
+          "description": "Active IANA timezone ID."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "language",
+        "themeMode",
+        "monthSystem",
+        "ayanamsha",
+        "birthNakshatra",
+        "use24HourFormat",
+        "notifySunrise",
+        "notifySunset",
+        "notifyTithiChange",
+        "notifyNakshatraChange",
+        "notifyVratReminders",
+        "selectedLocationName",
+        "selectedLocationCountry",
+        "selectedLocationLat",
+        "selectedLocationLon",
+        "selectedLocationTz",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavedLocation": {
+      "title": "SavedLocation",
+      "description": "User saved cities and custom geographic coordinates with exact latitude, longitude, and IANA timezone.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name for the location."
+        },
+        "country": {
+          "type": "string",
+          "description": "Country code or Custom tag."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Latitude (-90 to +90)."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Longitude (-180 to +180)."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone ID."
+        },
+        "population": {
+          "type": "integer",
+          "description": "City population or 0 for custom coordinates."
+        },
+        "gpsResolved": {
+          "type": "boolean",
+          "description": "Whether acquired via GPS."
+        },
+        "customLocation": {
+          "type": "boolean",
+          "description": "Whether user entered custom coordinates."
+        },
+        "defaultLocation": {
+          "type": "boolean",
+          "description": "Whether pinned as user's default location."
+        },
+        "accuracyMeters": {
+          "type": "number",
+          "description": "Optional GPS horizontal accuracy in meters."
+        },
+        "savedAtMs": {
+          "type": "integer",
+          "description": "Client saved epoch milliseconds for deterministic ordering."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "country",
+        "latitude",
+        "longitude",
+        "timezone",
+        "population",
+        "gpsResolved",
+        "customLocation",
+        "defaultLocation",
+        "savedAtMs",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "NavtaraProfileDoc": {
+      "title": "NavtaraProfileDoc",
+      "description": "Saved person Janma Nakshatra profile for Navtara Chakra evaluation.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "name": {
+          "type": "string",
+          "description": "Person or native name."
+        },
+        "birthNakshatraIndex": {
+          "type": "integer",
+          "description": "Janma Nakshatra index (1..27)."
+        },
+        "birthPada": {
+          "type": "integer",
+          "description": "Nakshatra pada (1..4)."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional profile notes."
+        },
+        "defaultProfile": {
+          "type": "boolean",
+          "description": "Whether selected as the default active profile."
+        },
+        "updatedAtMs": {
+          "type": "integer",
+          "description": "Client update timestamp in epoch ms."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "birthNakshatraIndex",
+        "birthPada",
+        "notes",
+        "defaultProfile",
+        "updatedAtMs",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "NavtaraFeedbackDoc": {
+      "title": "NavtaraFeedbackDoc",
+      "description": "Daily Navtara journal rating and personal reflection linked to a profile.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "profileCloudId": {
+          "type": "string",
+          "description": "Cloud document ID of the associated NavtaraProfileDoc."
+        },
+        "dateIso": {
+          "type": "string",
+          "description": "ISO date YYYY-MM-DD."
+        },
+        "rating": {
+          "type": "string",
+          "enum": ["AUSPICIOUS", "NEUTRAL", "CAUTION"],
+          "description": "Day outcome rating."
+        },
+        "note": {
+          "type": "string",
+          "description": "Personal daily journal observation."
+        },
+        "updatedAtMs": {
+          "type": "integer",
+          "description": "Client update timestamp in epoch ms."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "profileCloudId",
+        "dateIso",
+        "rating",
+        "note",
+        "updatedAtMs",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavedNavtaraReportDoc": {
+      "title": "SavedNavtaraReportDoc",
+      "description": "Saved monthly or custom-range Navtara transit report summary.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "profileCloudId": {
+          "type": "string",
+          "description": "Associated Navtara profile cloud ID or local fallback key."
+        },
+        "profileName": {
+          "type": "string",
+          "description": "Profile name at report generation time."
+        },
+        "birthNakshatraIndex": {
+          "type": "integer",
+          "description": "Birth Nakshatra index (1..27)."
+        },
+        "birthPada": {
+          "type": "integer",
+          "description": "Birth Pada (1..4)."
+        },
+        "startDateIso": {
+          "type": "string",
+          "description": "Start ISO date YYYY-MM-DD."
+        },
+        "endDateIso": {
+          "type": "string",
+          "description": "End ISO date YYYY-MM-DD."
+        },
+        "dateRange": {
+          "type": "boolean",
+          "description": "True for custom date range, false for full calendar month."
+        },
+        "locationName": {
+          "type": "string",
+          "description": "Location display name."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Location latitude."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Location longitude."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone."
+        },
+        "ayanamshaKey": {
+          "type": "string",
+          "enum": ["citra", "revati", "rohini", "pushya", "mula", "krishnamurti", "raman", "tropical"],
+          "description": "Ayanamsha API key."
+        },
+        "monthSystemKey": {
+          "type": "string",
+          "enum": ["amanta", "purnimanta"],
+          "description": "Lunar month system key."
+        },
+        "auspiciousCount": {
+          "type": "integer",
+          "description": "Number of auspicious days in report."
+        },
+        "mixedCount": {
+          "type": "integer",
+          "description": "Number of transition/mixed days in report."
+        },
+        "cautionCount": {
+          "type": "integer",
+          "description": "Number of caution days in report."
+        },
+        "neutralCount": {
+          "type": "integer",
+          "description": "Number of neutral days in report."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Report summary notes."
+        },
+        "createdAtMs": {
+          "type": "integer",
+          "description": "Client creation timestamp in epoch ms."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "profileCloudId",
+        "profileName",
+        "birthNakshatraIndex",
+        "birthPada",
+        "startDateIso",
+        "endDateIso",
+        "dateRange",
+        "locationName",
+        "latitude",
+        "longitude",
+        "timezone",
+        "ayanamshaKey",
+        "monthSystemKey",
+        "auspiciousCount",
+        "mixedCount",
+        "cautionCount",
+        "neutralCount",
+        "notes",
+        "createdAtMs",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavedKundliChartDoc": {
+      "title": "SavedKundliChartDoc",
+      "description": "Saved Janam Kundli birth chart record with serialized KundliBirthInput JSON.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "name": {
+          "type": "string",
+          "description": "Native full name."
+        },
+        "birthYear": {
+          "type": "integer",
+          "description": "Birth year."
+        },
+        "birthMonth": {
+          "type": "integer",
+          "description": "Birth month (1..12)."
+        },
+        "birthDay": {
+          "type": "integer",
+          "description": "Birth day (1..31)."
+        },
+        "birthHour": {
+          "type": "integer",
+          "description": "Birth hour (0..23)."
+        },
+        "birthMinute": {
+          "type": "integer",
+          "description": "Birth minute (0..59)."
+        },
+        "placeName": {
+          "type": "string",
+          "description": "Birth location name."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Birth latitude."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Birth longitude."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Birth IANA timezone."
+        },
+        "inputJson": {
+          "type": "string",
+          "description": "Serialized KundliBirthInput JSON payload."
+        },
+        "lagnaSignIndex": {
+          "type": "integer",
+          "description": "Ascendant Rashi index (0..11)."
+        },
+        "moonSignIndex": {
+          "type": "integer",
+          "description": "Natal Moon Rashi index (0..11)."
+        },
+        "moonNakshatraNumber": {
+          "type": "integer",
+          "description": "Janma Nakshatra number (1..27)."
+        },
+        "createdAtMs": {
+          "type": "integer",
+          "description": "Client creation epoch ms."
+        },
+        "updatedAtMs": {
+          "type": "integer",
+          "description": "Client update epoch ms."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "birthYear",
+        "birthMonth",
+        "birthDay",
+        "birthHour",
+        "birthMinute",
+        "placeName",
+        "latitude",
+        "longitude",
+        "timezone",
+        "inputJson",
+        "lagnaSignIndex",
+        "moonSignIndex",
+        "moonNakshatraNumber",
+        "createdAtMs",
+        "updatedAtMs",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserAccessPolicy": {
+      "title": "UserAccessPolicy",
+      "description": "Role-based access control document per Firebase Auth UID defining role, approval status, assigned page keys, and assigned feature keys.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the account."
+        },
+        "email": {
+          "type": "string",
+          "description": "Lowercase Google account email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Optional user display name."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["ADMIN", "USER"],
+          "description": "Account role."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "ACTIVE", "SUSPENDED"],
+          "description": "Account authorization status."
+        },
+        "allowedPages": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of permitted AppPageKey enum names."
+        },
+        "allowedFeatures": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of permitted AppFeatureKey enum names."
+        },
+        "authorizedByUid": {
+          "type": "string",
+          "description": "Optional Admin UID that last authorized or modified this policy."
+        },
+        "inviteHash": {
+          "type": "string",
+          "description": "Optional SHA-256 emailHash of a pre-authorized EmailInviteRule claimed during first sign-in."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "email",
+        "role",
+        "status",
+        "allowedPages",
+        "allowedFeatures",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "EmailInviteRule": {
+      "title": "EmailInviteRule",
+      "description": "Pre-authorization rule keyed by lowercase SHA-256 hex hash of a Google email address.",
+      "type": "object",
+      "properties": {
+        "emailHash": {
+          "type": "string",
+          "description": "Lowercase SHA-256 hex digest of the trimmed lowercase email."
+        },
+        "email": {
+          "type": "string",
+          "description": "Lowercase Google email address."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["ADMIN", "USER"],
+          "description": "Pre-assigned account role."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "ACTIVE", "SUSPENDED"],
+          "description": "Pre-assigned authorization status."
+        },
+        "allowedPages": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Pre-assigned AppPageKey enum names."
+        },
+        "allowedFeatures": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Pre-assigned AppFeatureKey enum names."
+        },
+        "createdByUid": {
+          "type": "string",
+          "description": "Admin UID that created the pre-authorization rule."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "emailHash",
+        "email",
+        "role",
+        "status",
+        "allowedPages",
+        "allowedFeatures",
+        "createdByUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserSessionLock": {
+      "title": "UserSessionLock",
+      "description": "Single-device active session token lock per Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID owning this session lock."
+        },
+        "activeSessionToken": {
+          "type": "string",
+          "description": "UUID v4 token of the single active device session."
+        },
+        "deviceName": {
+          "type": "string",
+          "description": "Manufacturer and model of the device holding the lock."
+        },
+        "forcedLogout": {
+          "type": "boolean",
+          "description": "True when an Admin forces immediate remote sign-out."
+        },
+        "claimedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the active device claimed this session."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "activeSessionToken",
+        "deviceName",
+        "forcedLogout",
+        "claimedAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile and synced calculation preferences."
+    },
+    "/users/{userId}/locations/{locationId}": {
+      "schema": { "$ref": "#/entities/SavedLocation" },
+      "description": "User saved and custom coordinate locations."
+    },
+    "/users/{userId}/navtara_profiles/{profileId}": {
+      "schema": { "$ref": "#/entities/NavtaraProfileDoc" },
+      "description": "Saved Navtara person profiles."
+    },
+    "/users/{userId}/navtara_feedbacks/{feedbackId}": {
+      "schema": { "$ref": "#/entities/NavtaraFeedbackDoc" },
+      "description": "Daily Navtara journal entries."
+    },
+    "/users/{userId}/navtara_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/SavedNavtaraReportDoc" },
+      "description": "Saved Navtara monthly and custom-range period reports."
+    },
+    "/users/{userId}/kundli_charts/{chartId}": {
+      "schema": { "$ref": "#/entities/SavedKundliChartDoc" },
+      "description": "Saved Janam Kundli birth charts."
+    },
+    "/user_access/{userId}": {
+      "schema": { "$ref": "#/entities/UserAccessPolicy" },
+      "description": "Role-based access control policy per user UID."
+    },
+    "/email_invites/{emailHash}": {
+      "schema": { "$ref": "#/entities/EmailInviteRule" },
+      "description": "Pre-authorized email access templates keyed by lowercase SHA-256 hex digest."
+    },
+    "/user_sessions/{userId}": {
+      "schema": { "$ref": "#/entities/UserSessionLock" },
+      "description": "Single-device active session lock per user UID."
+    }
+  }
+}
