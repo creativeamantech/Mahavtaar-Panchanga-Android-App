@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "source": {
     "repository": "creativeamantech/mahavtaarpanchanga",
-    "commit": "78dd35cb3b372afc96b91d2d966226d7a8b377d4",
+    "commit": "63401e09971a11e2f612f49d85407964dc62769b",
     "enginePath": "src/lib/panchangaEngine.server.ts",
     "astronomyEngineVersion": "2.1.19",
-    "generatedAtUtc": "2026-11-23T02:02:52.738Z"
+    "generatedAtUtc": "2026-11-26T05:27:38.175Z"
   },
   "fixtureCount": 41,
   "fixtures": [
